@@ -1,7 +1,7 @@
 {
   "name": "expo-blocker",
   "version": "0.1.0",
-  "description": "app blocker engine",
+  "description": "App blocker for React Native/Expo with scheduling, app usage tracking, and customizable overlay UI",
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "scripts": {
@@ -18,8 +18,12 @@
   "keywords": [
     "react-native",
     "expo",
-    "expo-blocker",
-    "ExpoBlocker"
+    "app-blocker",
+    "screen-time",
+    "app-usage",
+    "productivity",
+    "parental-control",
+    "focus"
   ],
   "repository": "https://github.com/YeneKoo/ExpoBlocker",
   "bugs": {
