@@ -2,10 +2,12 @@
     xmlns:tools="http://schemas.android.com/tools">
     
     <!-- PACKAGE_USAGE_STATS: Required for UsageStatsManager to detect foreground apps -->
+    <!-- This is a special permission that requires the user to grant access through Settings -->
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"
         tools:ignore="ProtectedPermissions" />
     
     <!-- SYSTEM_ALERT_WINDOW: Required to display overlay on top of other apps -->
+    <!-- This permission allows the app to draw over other apps -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     
     <!-- FOREGROUND_SERVICE: Required to run a long-running service in the foreground -->
@@ -45,6 +47,7 @@
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <!-- For HTC devices -->
                 <action android:name="android.intent.action.ACTION_BOOT_COMPLETED" />
             </intent-filter>
         </receiver>

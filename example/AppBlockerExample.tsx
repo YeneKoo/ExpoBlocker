@@ -1,17 +1,18 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  Alert,
-  Button,
-  FlatList,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
   View,
+  Text,
+  Button,
+  StyleSheet,
+  TextInput,
+  FlatList,
+  Alert,
+  PermissionsAndroid,
+  Platform,
 } from 'react-native';
-import AppBlocker, { BlockerState, PermissionStatus } from 'expo-blocker';
+import AppBlocker, { BlockerState, PermissionStatus } from '../src';
 
-export default function App() {
+export default function AppBlockerExample() {
   const [state, setState] = useState<BlockerState | null>(null);
   const [permissions, setPermissions] = useState<PermissionStatus | null>(null);
   const [apps, setApps] = useState<string[]>([]);
@@ -72,7 +73,7 @@ export default function App() {
       if (selectedApps.length > 0) {
         await AppBlocker.block(selectedApps);
       } else {
-        await AppBlocker.block();
+        await AppBlocker.blockAll();
       }
       
       const newState = await AppBlocker.getState();
@@ -135,18 +136,20 @@ export default function App() {
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <View style={styles.container}>
       <Text style={styles.title}>App Blocker</Text>
       
+      {/* Permission Status */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Permissions</Text>
         <Text>Usage Stats: {permissions?.usageStats ? '✓' : '✗'}</Text>
         <Text>Overlay: {permissions?.overlay ? '✓' : '✗'}</Text>
-        {(!permissions?.usageStats || !permissions?.overlay) ? (
+        {!permissions?.usageStats || !permissions?.overlay ? (
           <Button title="Request Permissions" onPress={requestPermissions} />
         ) : null}
       </View>
 
+      {/* Current State */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Current State</Text>
         <Text>Blocking: {state?.isBlocking ? 'Active' : 'Inactive'}</Text>
@@ -156,6 +159,7 @@ export default function App() {
         <Text>Schedule Active: {state?.scheduleActivated ? 'Yes' : 'No'}</Text>
       </View>
 
+      {/* Block Controls */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Block Apps</Text>
         <Button title="Block All Non-System Apps" onPress={handleBlock} />
@@ -163,6 +167,7 @@ export default function App() {
         <Button title="Clear Blocking" onPress={handleClear} />
       </View>
 
+      {/* Schedule */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Schedule Blocking</Text>
         <TextInput
@@ -175,15 +180,15 @@ export default function App() {
         <Button title="Schedule" onPress={handleSchedule} />
       </View>
 
+      {/* App Selection */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Select Apps to Block ({selectedApps.length})</Text>
+        <Text style={styles.sectionTitle}>Select Apps to Block</Text>
         <FlatList
-          data={apps.slice(0, 20)}
+          data={apps.slice(0, 20)} // Limit for demo
           keyExtractor={(item) => item}
-          scrollEnabled={false}
           renderItem={({ item }) => (
             <View style={styles.appItem}>
-              <Text style={styles.appName} numberOfLines={1}>{item}</Text>
+              <Text style={styles.appName}>{item}</Text>
               <Button
                 title={selectedApps.includes(item) ? '✓' : '+'}
                 onPress={() => toggleAppSelection(item)}
@@ -195,7 +200,7 @@ export default function App() {
           <Button title={`Block Selected (${selectedApps.length})`} onPress={handleBlock} />
         )}
       </View>
-    </ScrollView>
+    </View>
   );
 }
 
@@ -243,6 +248,5 @@ const styles = StyleSheet.create({
   appName: {
     flex: 1,
     fontSize: 14,
-    marginRight: 8,
   },
 });

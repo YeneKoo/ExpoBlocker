@@ -1,19 +1,20 @@
-import type { StyleProp, ViewStyle } from 'react-native';
+export interface BlockerState {
+  isBlocking: boolean;
+  blockedApps: string[];
+  blockAll: boolean;
+  scheduledTime: string | null;
+  scheduleActivated: boolean;
+}
 
-export type OnLoadEventPayload = {
-  url: string;
-};
+export interface PermissionStatus {
+  usageStats: boolean;
+  overlay: boolean;
+}
+
+export interface OperationResult {
+  success: boolean;
+}
 
 export type ExpoBlockerModuleEvents = {
-  onChange: (params: ChangeEventPayload) => void;
-};
-
-export type ChangeEventPayload = {
-  value: string;
-};
-
-export type ExpoBlockerViewProps = {
-  url: string;
-  onLoad: (event: { nativeEvent: OnLoadEventPayload }) => void;
-  style?: StyleProp<ViewStyle>;
+  onBlockStateChange?: (params: BlockerState) => void;
 };

@@ -1,12 +1,19 @@
 import { NativeModule, requireNativeModule } from 'expo';
 
-import { ExpoBlockerModuleEvents } from './ExpoBlocker.types';
+import { BlockerState, ExpoBlockerModuleEvents, PermissionStatus } from './ExpoBlocker.types';
 
 declare class ExpoBlockerModule extends NativeModule<ExpoBlockerModuleEvents> {
-  PI: number;
-  hello(): string;
-  setValueAsync(value: string): Promise<void>;
+  block(apps: string[] | null): Promise<{ success: boolean }>;
+  clear(): Promise<{ success: boolean }>;
+  schedule(time: string): Promise<{ success: boolean }>;
+  getState(): Promise<BlockerState>;
+  isBlocking(): Promise<boolean>;
+  hasUsageStatsPermission(): Promise<boolean>;
+  hasOverlayPermission(): Promise<boolean>;
+  requestUsageStatsPermission(): Promise<{ success: boolean }>;
+  requestOverlayPermission(): Promise<{ success: boolean }>;
+  getInstalledApps(): Promise<string[]>;
+  checkPermissions(): Promise<PermissionStatus>;
 }
 
-// This call loads the native module object from the JSI.
 export default requireNativeModule<ExpoBlockerModule>('ExpoBlocker');
