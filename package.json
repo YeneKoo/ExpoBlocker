@@ -21,13 +21,13 @@
     "expo-blocker",
     "ExpoBlocker"
   ],
-  "repository": "https://github.com/NaolBM/ExpoBlocker",
+  "repository": "https://github.com/YeneKoo/ExpoBlocker",
   "bugs": {
-    "url": "https://github.com/NaolBM/ExpoBlocker/issues"
+    "url": "https://github.com/YeneKoo/ExpoBlocker/issues"
   },
   "author": "Naol-bm <naolbm@yenekoo.com> (NaolBM)",
   "license": "MIT",
-  "homepage": "https://github.com/NaolBM/ExpoBlocker#readme",
+  "homepage": "https://github.com/YeneKoo/ExpoBlocker#readme",
   "dependencies": {},
   "devDependencies": {
     "@types/react": "~19.1.1",

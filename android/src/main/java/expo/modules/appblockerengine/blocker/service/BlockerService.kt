@@ -14,6 +14,7 @@ import android.os.Looper
 import androidx.core.app.NotificationCompat
 import expo.modules.appblockerengine.blocker.controller.OverlayController
 import expo.modules.appblockerengine.blocker.monitor.AppMonitor
+import expo.modules.appblockerengine.blocker.model.AppInfo
 import expo.modules.appblockerengine.blocker.storage.PreferencesManager
 import expo.modules.appblockerengine.blocker.util.TimeUtils
 
@@ -68,6 +69,10 @@ class BlockerService : Service() {
         appMonitor = AppMonitor(this)
         overlayController = OverlayController(this)
         preferencesManager = PreferencesManager.getInstance(this)
+        
+        // Update overlay config from preferences
+        val config = preferencesManager.loadOverlayConfig()
+        overlayController.updateConfig(config)
         
         createNotificationChannel()
     }
@@ -163,11 +168,22 @@ class BlockerService : Service() {
         val shouldBlock = appMonitor.shouldBlockPackage(
             currentApp,
             state.blockedApps,
-            state.blockAll
+            state.blockAll,
+            state.excludeApps
         )
         
         if (shouldBlock) {
-            overlayController.showOverlay(currentApp)
+            val appName = appMonitor.getAppName(currentApp)
+            val usageTime = appMonitor.getUsageTimeForPackage(currentApp)
+            
+            val appInfo = AppInfo(
+                packageName = currentApp,
+                appName = appName,
+                iconBase64 = appMonitor.getAppIconBase64(currentApp),
+                usageTime = usageTime
+            )
+            
+            overlayController.showOverlayWithInfo(appInfo)
         } else {
             overlayController.hideOverlay()
         }

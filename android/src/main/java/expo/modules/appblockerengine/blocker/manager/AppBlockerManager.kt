@@ -1,7 +1,10 @@
 package expo.modules.appblockerengine.blocker.manager
 
 import android.content.Context
+import expo.modules.appblockerengine.blocker.model.AppInfo
+import expo.modules.appblockerengine.blocker.model.AppUsageStats
 import expo.modules.appblockerengine.blocker.model.BlockerState
+import expo.modules.appblockerengine.blocker.model.OverlayConfig
 import expo.modules.appblockerengine.blocker.monitor.AppMonitor
 import expo.modules.appblockerengine.blocker.service.BlockerService
 import expo.modules.appblockerengine.blocker.storage.PreferencesManager
@@ -23,15 +26,18 @@ class AppBlockerManager private constructor(private val context: Context) {
         }
     }
     
-    fun block(apps: List<String>?) {
+    fun block(apps: List<String>?, excludeApps: List<String> = emptyList()) {
         val currentState = preferencesManager.loadState()
+        
+        val mergedExcludeApps = (excludeApps + currentState.excludeApps + context.packageName).distinct()
         
         val state = BlockerState(
             isBlocking = true,
             blockedApps = apps ?: emptyList(),
             blockAll = apps == null || apps.isEmpty(),
             scheduledTime = currentState.scheduledTime,
-            scheduleActivated = currentState.scheduleActivated
+            scheduleActivated = currentState.scheduleActivated,
+            excludeApps = mergedExcludeApps
         )
         
         preferencesManager.saveState(state)
@@ -44,14 +50,15 @@ class AppBlockerManager private constructor(private val context: Context) {
             blockedApps = emptyList(),
             blockAll = false,
             scheduledTime = null,
-            scheduleActivated = false
+            scheduleActivated = false,
+            excludeApps = emptyList()
         )
         
         preferencesManager.saveState(clearedState)
         stopServiceIfNotNeeded()
     }
     
-    fun schedule(time: String): Boolean {
+    fun schedule(time: String, excludeApps: List<String> = emptyList()): Boolean {
         val parsed = TimeUtils.parseTime(time)
         if (parsed == null) {
             return false
@@ -61,18 +68,37 @@ class AppBlockerManager private constructor(private val context: Context) {
         
         val scheduleActivated = TimeUtils.isTimeReached(time)
         
+        val mergedExcludeApps = (excludeApps + currentState.excludeApps + context.packageName).distinct()
+        
         val state = BlockerState(
             isBlocking = currentState.isBlocking || scheduleActivated,
             blockedApps = currentState.blockedApps,
             blockAll = currentState.blockAll,
             scheduledTime = time,
-            scheduleActivated = scheduleActivated
+            scheduleActivated = scheduleActivated,
+            excludeApps = mergedExcludeApps
         )
         
         preferencesManager.saveState(state)
         startServiceIfNeeded()
         
         return true
+    }
+    
+    fun setExcludeApps(apps: List<String>) {
+        val currentState = preferencesManager.loadState()
+        val mergedExcludeApps = (apps + context.packageName).distinct()
+        
+        val newState = currentState.copy(excludeApps = mergedExcludeApps)
+        preferencesManager.saveState(newState)
+    }
+    
+    fun updateOverlayConfig(config: OverlayConfig) {
+        preferencesManager.saveOverlayConfig(config)
+    }
+    
+    fun getOverlayConfig(): OverlayConfig {
+        return preferencesManager.loadOverlayConfig()
     }
     
     fun getState(): BlockerState {
@@ -102,6 +128,22 @@ class AppBlockerManager private constructor(private val context: Context) {
     
     fun getInstalledApps(): List<String> {
         return appMonitor.getInstalledApps(includeSystemApps = false)
+    }
+    
+    fun getAppName(packageName: String): String {
+        return appMonitor.getAppName(packageName)
+    }
+    
+    fun getAppIconBase64(packageName: String): String? {
+        return appMonitor.getAppIconBase64(packageName)
+    }
+    
+    fun getUsageStats(): List<AppUsageStats> {
+        return appMonitor.getTodayUsageStats()
+    }
+    
+    fun getUsageTimeForPackage(packageName: String): Long {
+        return appMonitor.getUsageTimeForPackage(packageName)
     }
     
     private fun startServiceIfNeeded() {

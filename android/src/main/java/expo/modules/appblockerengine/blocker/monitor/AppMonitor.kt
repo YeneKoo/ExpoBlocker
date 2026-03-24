@@ -6,8 +6,14 @@ import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.drawable.BitmapDrawable
 import android.os.Build
 import android.provider.Settings
+import android.util.Base64
+import expo.modules.appblockerengine.blocker.model.AppUsageStats
+import java.io.ByteArrayOutputStream
 
 class AppMonitor(private val context: Context) {
     
@@ -88,7 +94,51 @@ class AppMonitor(private val context: Context) {
         }
     }
     
-    fun shouldBlockPackage(packageName: String, blockedApps: List<String>, blockAll: Boolean): Boolean {
+    fun getAppIconBase64(packageName: String): String? {
+        return try {
+            val appInfo = packageManager.getApplicationInfo(packageName, 0)
+            val icon = packageManager.getApplicationIcon(appInfo)
+            val bitmap = drawableToBitmap(icon)
+            val resizedBitmap = Bitmap.createScaledBitmap(bitmap, 128, 128, true)
+            bitmapToBase64(resizedBitmap)
+        } catch (e: Exception) {
+            null
+        }
+    }
+    
+    private fun drawableToBitmap(drawable: android.graphics.drawable.Drawable): Bitmap {
+        if (drawable is BitmapDrawable) {
+            return drawable.bitmap
+        }
+        
+        val width = if (drawable.intrinsicWidth > 0) drawable.intrinsicWidth else 48
+        val height = if (drawable.intrinsicHeight > 0) drawable.intrinsicHeight else 48
+        
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        drawable.setBounds(0, 0, canvas.width, canvas.height)
+        drawable.draw(canvas)
+        return bitmap
+    }
+    
+    private fun bitmapToBase64(bitmap: Bitmap): String {
+        val byteArrayOutputStream = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream)
+        val byteArray = byteArrayOutputStream.toByteArray()
+        return Base64.encodeToString(byteArray, Base64.NO_WRAP)
+    }
+    
+    fun shouldBlockPackage(packageName: String, blockedApps: List<String>, blockAll: Boolean, excludeApps: List<String>): Boolean {
+        // Always skip excluded apps
+        if (excludeApps.contains(packageName)) {
+            return false
+        }
+        
+        // Skip our own app
+        if (packageName == context.packageName) {
+            return false
+        }
+        
         if (blockedApps.contains(packageName)) {
             return true
         }
@@ -111,5 +161,64 @@ class AppMonitor(private val context: Context) {
     
     fun isOverlayPermissionGranted(): Boolean {
         return Settings.canDrawOverlays(context)
+    }
+    
+    fun getAppUsageStats(startTime: Long, endTime: Long): List<AppUsageStats> {
+        if (!hasUsageStatsPermission()) {
+            return emptyList()
+        }
+        
+        val usageStatsList: List<UsageStats> = usageStatsManager.queryUsageStats(
+            UsageStatsManager.INTERVAL_DAILY,
+            startTime,
+            endTime
+        )
+        
+        return usageStatsList
+            .filter { it.totalTimeInForeground > 0 }
+            .map { stats ->
+                AppUsageStats(
+                    packageName = stats.packageName,
+                    appName = getAppName(stats.packageName),
+                    iconBase64 = getAppIconBase64(stats.packageName),
+                    usageTime = stats.totalTimeInForeground,
+                    lastTimeUsed = stats.lastTimeUsed
+                )
+            }
+            .sortedByDescending { it.usageTime }
+    }
+    
+    fun getTodayUsageStats(): List<AppUsageStats> {
+        val calendar = java.util.Calendar.getInstance()
+        calendar.set(java.util.Calendar.HOUR_OF_DAY, 0)
+        calendar.set(java.util.Calendar.MINUTE, 0)
+        calendar.set(java.util.Calendar.SECOND, 0)
+        calendar.set(java.util.Calendar.MILLISECOND, 0)
+        val startTime = calendar.timeInMillis
+        val endTime = System.currentTimeMillis()
+        
+        return getAppUsageStats(startTime, endTime)
+    }
+    
+    fun getUsageTimeForPackage(packageName: String): Long {
+        if (!hasUsageStatsPermission()) {
+            return 0
+        }
+        
+        val calendar = java.util.Calendar.getInstance()
+        calendar.set(java.util.Calendar.HOUR_OF_DAY, 0)
+        calendar.set(java.util.Calendar.MINUTE, 0)
+        calendar.set(java.util.Calendar.SECOND, 0)
+        calendar.set(java.util.Calendar.MILLISECOND, 0)
+        val startTime = calendar.timeInMillis
+        val endTime = System.currentTimeMillis()
+        
+        val usageStatsList: List<UsageStats> = usageStatsManager.queryUsageStats(
+            UsageStatsManager.INTERVAL_DAILY,
+            startTime,
+            endTime
+        )
+        
+        return usageStatsList.find { it.packageName == packageName }?.totalTimeInForeground ?: 0
     }
 }
