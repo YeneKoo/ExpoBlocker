@@ -284,6 +284,27 @@ export default function App() {
 | `PACKAGE_USAGE_STATS` | Detect foreground apps | Settings → Apps → Special access → Usage access |
 | `SYSTEM_ALERT_WINDOW` | Show blocking overlay | Settings → Apps → Special access → Display over other apps |
 
+## Quick Testing with ADB
+
+If you're testing on an emulator or device connected via ADB, you can grant permissions programmatically:
+
+```bash
+# Get your app's package name (default: expo.modules.appblockerengine.example)
+adb shell pm list packages | grep blocker
+
+# Grant Usage Access permission
+adb shell appops set expo.modules.appblockerengine.example PACKAGE_USAGE_STATS allow
+
+# Grant Overlay permission
+adb shell appops set expo.modules.appblockerengine.example SYSTEM_ALERT_WINDOW allow
+
+# Restart the app to apply permissions
+adb shell am force-stop expo.modules.appblockerengine.example
+adb shell am start -n expo.modules.appblockerengine.example/.MainActivity
+```
+
+For your own app, replace `expo.modules.appblockerengine.example` with your package name.
+
 ## License
 
 MIT
