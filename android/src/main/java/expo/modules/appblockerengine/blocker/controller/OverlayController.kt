@@ -1,15 +1,20 @@
 package expo.modules.appblockerengine.blocker.controller
 
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.BitmapFactory
 import android.graphics.PixelFormat
 import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.util.Base64
 import android.view.Gravity
 import android.view.WindowManager
+import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -26,6 +31,7 @@ class OverlayController(private val context: Context) {
     }
     private var currentConfig: OverlayConfig = OverlayConfig()
     private var currentAppInfo: AppInfo? = null
+    private var buttonClickReceiver: BroadcastReceiver? = null
     
     private val layoutParams: WindowManager.LayoutParams by lazy {
         WindowManager.LayoutParams(
@@ -51,7 +57,6 @@ class OverlayController(private val context: Context) {
     
     fun updateConfig(config: OverlayConfig) {
         currentConfig = config
-        // If overlay is showing, recreate it with new config
         if (overlayView != null) {
             val appInfo = currentAppInfo
             hideOverlay()
@@ -94,22 +99,34 @@ class OverlayController(private val context: Context) {
             setBackgroundColor(config.backgroundColor)
         }
         
+        val mainLayout = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL or Gravity.TOP
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            ).apply {
+                gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+            }
+            setPadding(40, 80, 40, 40)
+        }
+        
         val contentLayout = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.WRAP_CONTENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT
+            gravity = Gravity.CENTER_HORIZONTAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply {
-                gravity = Gravity.CENTER
+                topMargin = 100
             }
         }
         
-        // App Icon
         if (config.showAppIcon && appInfo.iconBase64 != null) {
             val iconImageView = ImageView(context).apply {
-                layoutParams = LinearLayout.LayoutParams(200, 200).apply {
-                    bottomMargin = 40
+                layoutParams = LinearLayout.LayoutParams(180, 180).apply {
+                    bottomMargin = 24
+                    gravity = Gravity.CENTER_HORIZONTAL
                 }
                 scaleType = ImageView.ScaleType.FIT_CENTER
             }
@@ -119,17 +136,15 @@ class OverlayController(private val context: Context) {
                 val bitmap = BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.size)
                 iconImageView.setImageBitmap(bitmap)
             } catch (e: Exception) {
-                // Icon loading failed
             }
             
             contentLayout.addView(iconImageView)
         }
         
-        // App Name
         if (config.showAppName) {
             val appNameText = TextView(context).apply {
-                text = appInfo.appName
-                textSize = 24f
+                text = "${appInfo.appName} is blocked"
+                textSize = 28f
                 setTextColor(config.textColor)
                 gravity = Gravity.CENTER
                 setTypeface(typeface, Typeface.BOLD)
@@ -137,57 +152,117 @@ class OverlayController(private val context: Context) {
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 ).apply {
-                    bottomMargin = 20
+                    bottomMargin = 16
+                    gravity = Gravity.CENTER_HORIZONTAL
                 }
             }
             contentLayout.addView(appNameText)
         }
         
-        // Title
-        val titleText = TextView(context).apply {
-            text = config.title
-            textSize = config.titleTextSize
-            setTextColor(config.textColor)
-            gravity = Gravity.CENTER
-            setTypeface(typeface, Typeface.BOLD)
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                bottomMargin = 20
-            }
-        }
-        contentLayout.addView(titleText)
-        
-        // Message
-        val messageText = TextView(context).apply {
-            text = config.message
-            textSize = config.messageTextSize
-            setTextColor(config.textColor)
-            gravity = Gravity.CENTER
-            alpha = 0.7f
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                bottomMargin = 30
-            }
-        }
-        contentLayout.addView(messageText)
-        
-        // Usage Stats
-        if (config.showUsageStats && appInfo.usageTime > 0) {
-            val usageText = TextView(context).apply {
-                text = "Today's usage: ${formatUsageTime(appInfo.usageTime)}"
-                textSize = 16f
+        if (!config.message.isNullOrEmpty()) {
+            val messageText = TextView(context).apply {
+                text = config.message
+                textSize = config.messageTextSize
                 setTextColor(config.textColor)
                 gravity = Gravity.CENTER
-                alpha = 0.6f
+                alpha = 0.85f
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    bottomMargin = 12
+                    gravity = Gravity.CENTER_HORIZONTAL
+                }
+            }
+            contentLayout.addView(messageText)
+        }
+        
+        if (!config.description.isNullOrEmpty()) {
+            val descriptionText = TextView(context).apply {
+                text = config.description
+                textSize = config.descriptionTextSize
+                setTextColor(config.textColor)
+                gravity = Gravity.CENTER
+                alpha = 0.65f
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    bottomMargin = 16
+                    gravity = Gravity.CENTER_HORIZONTAL
+                }
+            }
+            contentLayout.addView(descriptionText)
+        }
+        
+        if (config.showTodayUsage && appInfo.usageTime > 0) {
+            val usageText = TextView(context).apply {
+                text = "Today's usage: ${formatUsageTime(appInfo.usageTime)}"
+                textSize = 15f
+                setTextColor(config.textColor)
+                gravity = Gravity.CENTER
+                alpha = 0.7f
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    bottomMargin = 16
+                    gravity = Gravity.CENTER_HORIZONTAL
+                }
             }
             contentLayout.addView(usageText)
         }
         
-        container.addView(contentLayout)
+        mainLayout.addView(contentLayout)
+        
+        if (!config.buttonText.isNullOrEmpty()) {
+            val buttonWrapper = LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER_HORIZONTAL or Gravity.BOTTOM
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    0,
+                    1f
+                ).apply {
+                    gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+                }
+            }
+            
+            val button = Button(context).apply {
+                text = config.buttonText
+                setTextColor(config.buttonTextColor)
+                textSize = 16f
+                setTypeface(typeface, Typeface.BOLD)
+                gravity = Gravity.CENTER
+                
+                val drawable = GradientDrawable().apply {
+                    setColor(config.buttonColor)
+                    cornerRadius = config.buttonBorderRadius
+                }
+                background = drawable
+                
+                layoutParams = LinearLayout.LayoutParams(
+                    config.buttonWidth.toInt(),
+                    config.buttonHeight.toInt()
+                ).apply {
+                    gravity = Gravity.CENTER_HORIZONTAL
+                    topMargin = config.buttonMarginTop.toInt()
+                    bottomMargin = 60
+                }
+                setPadding(30, 0, 30, 0)
+            }
+            
+            button.setOnClickListener {
+                val intent = Intent(ACTION_BUTTON_CLICKED)
+                intent.putExtra("packageName", appInfo.packageName)
+                context.sendBroadcast(intent)
+            }
+            
+            buttonWrapper.addView(button)
+            mainLayout.addView(buttonWrapper)
+        }
+        
+        container.addView(mainLayout)
         return container
     }
     
@@ -219,5 +294,9 @@ class OverlayController(private val context: Context) {
     
     fun isOverlayShowing(): Boolean {
         return overlayView != null
+    }
+    
+    companion object {
+        const val ACTION_BUTTON_CLICKED = "expo.modules.appblockerengine.action.BUTTON_CLICKED"
     }
 }

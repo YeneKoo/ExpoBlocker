@@ -4,10 +4,9 @@ import {
   Button,
   FlatList,
   Image,
-  Modal,
-  Platform,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -17,19 +16,14 @@ import AppBlocker, {
   BlockerState, 
   PermissionStatus, 
   OverlayConfig,
-  AppUsageStat 
+  AppUsageStat,
+  useButtonClickListener
 } from 'expo-blocker';
 
 const DEFAULT_OVERLAY_CONFIG: OverlayConfig = {
-  title: 'App Blocked 🔒',
-  message: 'Time to focus on something else!',
-  backgroundColor: 0xFF1A1A1A,
-  textColor: 0xFFFFFFFF,
-  titleTextSize: 32,
-  messageTextSize: 18,
   showAppIcon: true,
   showAppName: true,
-  showUsageStats: true,
+  showTodayUsage: true,
 };
 
 export default function App() {
@@ -41,8 +35,24 @@ export default function App() {
   const [scheduleTime, setScheduleTime] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [overlayConfig, setOverlayConfig] = useState<OverlayConfig>(DEFAULT_OVERLAY_CONFIG);
-  const [showSettings, setShowSettings] = useState(false);
-  const [showUsage, setShowUsage] = useState(false);
+  
+  // Custom overlay settings
+  const [customTitle, setCustomTitle] = useState('App Blocked');
+  const [customMessage, setCustomMessage] = useState('');
+  const [customDescription, setCustomDescription] = useState('');
+  const [customButtonText, setCustomButtonText] = useState('Open Settings');
+  const [showTodayUsage, setShowTodayUsage] = useState(false);
+  // Button customization
+  const [buttonBorderRadius, setButtonBorderRadius] = useState('50');
+  const [buttonWidth, setButtonWidth] = useState('280');
+  const [buttonHeight, setButtonHeight] = useState('60');
+  const [buttonMarginTop, setButtonMarginTop] = useState('40');
+  const [buttonColor, setButtonColor] = useState('#4CAF50');
+
+  // Listen for button clicks from overlay
+  useButtonClickListener((event) => {
+    Alert.alert('Button Clicked', `Package: ${event.packageName}\nAction: ${event.action}`);
+  });
 
   useEffect(() => {
     initializeBlocker();
@@ -59,6 +69,11 @@ export default function App() {
 
       const savedConfig = await AppBlocker.getOverlayConfig();
       setOverlayConfig(savedConfig);
+      setCustomTitle(savedConfig.title || 'App Blocked');
+      setCustomMessage(savedConfig.message || '');
+      setCustomDescription(savedConfig.description || '');
+      setCustomButtonText(savedConfig.buttonText || '');
+      setShowTodayUsage(savedConfig.showTodayUsage ?? true);
 
       if (perms.usageStats) {
         const usageStats = await AppBlocker.getUsageStats();
@@ -71,18 +86,29 @@ export default function App() {
     }
   };
 
-  const requestPermissions = async () => {
+  const handleUpdateOverlayConfig = async () => {
     try {
-      if (permissions && !permissions.usageStats) {
-        await AppBlocker.requestUsageStatsPermission();
-      }
-      if (permissions && !permissions.overlay) {
-        await AppBlocker.requestOverlayPermission();
-      }
+      const config: OverlayConfig = {
+        title: customTitle,
+        message: customMessage || undefined,
+        description: customDescription || undefined,
+        buttonText: customButtonText || undefined,
+        showAppIcon: overlayConfig.showAppIcon,
+        showAppName: overlayConfig.showAppName,
+        showTodayUsage: showTodayUsage,
+        showUsageStats: overlayConfig.showUsageStats,
+        buttonBorderRadius: parseInt(buttonBorderRadius) || 50,
+        buttonWidth: parseInt(buttonWidth) || 280,
+        buttonHeight: parseInt(buttonHeight) || 60,
+        buttonMarginTop: parseInt(buttonMarginTop) || 40,
+        buttonColor: parseInt(buttonColor.replace('#', '0xFF')) || 0xFF4CAF50,
+      };
       
-      setTimeout(initializeBlocker, 1000);
+      await AppBlocker.updateOverlayConfig(config);
+      setOverlayConfig(config);
+      Alert.alert('Success', 'Overlay config updated');
     } catch (error) {
-      console.error('Permission request error:', error);
+      Alert.alert('Error', 'Failed to update overlay config');
     }
   };
 
@@ -134,15 +160,6 @@ export default function App() {
     }
   };
 
-  const handleUpdateOverlayConfig = async () => {
-    try {
-      await AppBlocker.updateOverlayConfig(overlayConfig);
-      Alert.alert('Success', 'Overlay config updated');
-    } catch (error) {
-      Alert.alert('Error', 'Failed to update overlay config');
-    }
-  };
-
   const toggleAppSelection = (packageName: string) => {
     setSelectedApps(prev => 
       prev.includes(packageName)
@@ -159,7 +176,7 @@ export default function App() {
     );
   };
 
-  const renderAppIcon = (iconBase64: string | null, size: number = 48) => {
+  const renderAppIcon = (iconBase64: string | null, size: number = 40) => {
     if (!iconBase64) {
       return <View style={[styles.iconPlaceholder, { width: size, height: size }]} />;
     }
@@ -190,7 +207,14 @@ export default function App() {
         <Text>Usage Stats: {permissions?.usageStats ? '✓' : '✗'}</Text>
         <Text>Overlay: {permissions?.overlay ? '✓' : '✗'}</Text>
         {(!permissions?.usageStats || !permissions?.overlay) ? (
-          <Button title="Request Permissions" onPress={requestPermissions} />
+          <Button title="Request Permissions" onPress={async () => {
+            if (permissions && !permissions.usageStats) {
+              await AppBlocker.requestUsageStatsPermission();
+            }
+            if (permissions && !permissions.overlay) {
+              await AppBlocker.requestOverlayPermission();
+            }
+          }} />
         ) : null}
       </View>
 
@@ -198,47 +222,31 @@ export default function App() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Current State</Text>
         <Text>Blocking: {state?.isBlocking ? 'Active' : 'Inactive'}</Text>
-        <Text>Block All: {state?.blockAll ? 'Yes' : 'No'}</Text>
-        <Text>Blocked Apps: {state?.blockedApps?.length || 0}</Text>
         <Text>Excluded Apps: {excludeApps.length}</Text>
         <Text>Scheduled Time: {state?.scheduledTime || 'None'}</Text>
       </View>
 
       {/* Usage Stats */}
       <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Today's App Usage</Text>
-          <Button 
-            title={showUsage ? 'Hide' : 'Show'} 
-            onPress={() => setShowUsage(!showUsage)}
-          />
-        </View>
-        
-        {showUsage && apps.length > 0 ? (
-          <FlatList
-            data={apps.slice(0, 10)}
-            keyExtractor={(item) => item.packageName}
-            scrollEnabled={false}
-            renderItem={({ item }) => (
-              <View style={styles.appItem}>
-                {renderAppIcon(item.iconBase64, 40)}
-                <View style={styles.appInfo}>
-                  <Text style={styles.appName} numberOfLines={1}>
-                    {item.appName}
-                  </Text>
-                  <Text style={styles.usageTime}>{item.usageTimeFormatted}</Text>
-                </View>
+        <Text style={styles.sectionTitle}>Today's App Usage</Text>
+        <FlatList
+          data={apps.slice(0, 10)}
+          keyExtractor={(item) => item.packageName}
+          scrollEnabled={false}
+          renderItem={({ item }) => (
+            <View style={styles.appItem}>
+              {renderAppIcon(item.iconBase64, 40)}
+              <View style={styles.appInfo}>
+                <Text style={styles.appName} numberOfLines={1}>{item.appName}</Text>
+                <Text style={styles.usageTime}>{item.usageTimeFormatted}</Text>
               </View>
-            )}
-          />
-        ) : showUsage ? (
-          <Text style={styles.emptyText}>No usage data available</Text>
-        ) : null}
+            </View>
+          )}
+        />
       </View>
 
       {/* Block Controls */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Block Controls</Text>
         <Button title="Block All Non-System Apps" onPress={handleBlock} />
         <View style={styles.spacer} />
         <Button title="Clear Blocking" onPress={handleClear} />
@@ -259,7 +267,7 @@ export default function App() {
 
       {/* Exclude Apps */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Apps to Exclude ({excludeApps.length})</Text>
+        <Text style={styles.sectionTitle}>Exclude Apps ({excludeApps.length})</Text>
         <Text style={styles.hint}>These apps will never be blocked</Text>
         <FlatList
           data={apps.slice(0, 15)}
@@ -272,15 +280,9 @@ export default function App() {
             >
               {renderAppIcon(item.iconBase64, 40)}
               <View style={styles.appInfo}>
-                <Text style={styles.appName} numberOfLines={1}>
-                  {item.appName}
-                </Text>
-                <Text style={styles.usageTime}>{item.usageTimeFormatted}</Text>
+                <Text style={styles.appName} numberOfLines={1}>{item.appName}</Text>
               </View>
-              <View style={[
-                styles.checkbox,
-                excludeApps.includes(item.packageName) && styles.checkboxChecked
-              ]}>
+              <View style={[styles.checkbox, excludeApps.includes(item.packageName) && styles.checkboxChecked]}>
                 {excludeApps.includes(item.packageName) && <Text style={styles.checkmark}>✓</Text>}
               </View>
             </TouchableOpacity>
@@ -302,86 +304,136 @@ export default function App() {
             >
               {renderAppIcon(item.iconBase64, 40)}
               <View style={styles.appInfo}>
-                <Text style={styles.appName} numberOfLines={1}>
-                  {item.appName}
-                </Text>
-                <Text style={styles.usageTime}>{item.usageTimeFormatted}</Text>
+                <Text style={styles.appName} numberOfLines={1}>{item.appName}</Text>
               </View>
-              <View style={[
-                styles.checkbox,
-                selectedApps.includes(item.packageName) && styles.checkboxChecked
-              ]}>
+              <View style={[styles.checkbox, selectedApps.includes(item.packageName) && styles.checkboxChecked]}>
                 {selectedApps.includes(item.packageName) && <Text style={styles.checkmark}>✓</Text>}
               </View>
             </TouchableOpacity>
           )}
         />
         {selectedApps.length > 0 && (
-          <Button 
-            title={`Block Selected (${selectedApps.length})`} 
-            onPress={handleBlock} 
-          />
+          <Button title={`Block Selected (${selectedApps.length})`} onPress={handleBlock} />
         )}
       </View>
 
-      {/* Overlay Settings */}
+      {/* Overlay Customization */}
       <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Overlay Customization</Text>
-          <Button 
-            title={showSettings ? 'Hide' : 'Show'} 
-            onPress={() => setShowSettings(!showSettings)}
+        <Text style={styles.sectionTitle}>Overlay Customization</Text>
+        
+        <Text style={styles.label}>Title (e.g., "App Blocked")</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Title"
+          value={customTitle}
+          onChangeText={setCustomTitle}
+        />
+        
+        <Text style={styles.label}>Message (optional)</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Short message"
+          value={customMessage}
+          onChangeText={setCustomMessage}
+        />
+        
+        <Text style={styles.label}>Description (optional)</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Longer description"
+          value={customDescription}
+          onChangeText={setCustomDescription}
+        />
+        
+        <Text style={styles.label}>Button Text (optional)</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="e.g., Open Settings"
+          value={customButtonText}
+          onChangeText={setCustomButtonText}
+        />
+        
+        <View style={styles.switchRow}>
+          <Text>Show App Icon</Text>
+          <Switch
+            value={overlayConfig.showAppIcon ?? true}
+            onValueChange={(v) => setOverlayConfig({ ...overlayConfig, showAppIcon: v })}
           />
         </View>
         
-        {showSettings && (
-          <>
+        <View style={styles.switchRow}>
+          <Text>Show App Name</Text>
+          <Switch
+            value={overlayConfig.showAppName ?? true}
+            onValueChange={(v) => setOverlayConfig({ ...overlayConfig, showAppName: v })}
+          />
+        </View>
+        
+        <View style={styles.switchRow}>
+          <Text>Show Today's Usage</Text>
+          <Switch
+            value={showTodayUsage}
+            onValueChange={setShowTodayUsage}
+          />
+        </View>
+        
+        <Text style={[styles.label, { marginTop: 16 }]}>Button Customization</Text>
+        
+        <Text style={styles.label}>Button Color (hex)</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="#4CAF50"
+          value={buttonColor}
+          onChangeText={setButtonColor}
+        />
+        
+        <View style={styles.rowInput}>
+          <View style={styles.halfInput}>
+            <Text style={styles.labelSmall}>Border Radius</Text>
             <TextInput
               style={styles.input}
-              placeholder="Title"
-              value={overlayConfig.title}
-              onChangeText={(text) => setOverlayConfig({ ...overlayConfig, title: text })}
+              placeholder="50"
+              value={buttonBorderRadius}
+              onChangeText={setButtonBorderRadius}
+              keyboardType="numeric"
             />
+          </View>
+          <View style={styles.halfInput}>
+            <Text style={styles.labelSmall}>Width</Text>
             <TextInput
               style={styles.input}
-              placeholder="Message"
-              value={overlayConfig.message}
-              onChangeText={(text) => setOverlayConfig({ ...overlayConfig, message: text })}
+              placeholder="280"
+              value={buttonWidth}
+              onChangeText={setButtonWidth}
+              keyboardType="numeric"
             />
-            <View style={styles.checkboxRow}>
-              <TouchableOpacity 
-                style={styles.checkboxLabel}
-                onPress={() => setOverlayConfig({ ...overlayConfig, showAppIcon: !overlayConfig.showAppIcon })}
-              >
-                <View style={[styles.checkbox, overlayConfig.showAppIcon && styles.checkboxChecked]}>
-                  {overlayConfig.showAppIcon && <Text style={styles.checkmark}>✓</Text>}
-                </View>
-                <Text>Show App Icon</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={styles.checkboxLabel}
-                onPress={() => setOverlayConfig({ ...overlayConfig, showAppName: !overlayConfig.showAppName })}
-              >
-                <View style={[styles.checkbox, overlayConfig.showAppName && styles.checkboxChecked]}>
-                  {overlayConfig.showAppName && <Text style={styles.checkmark}>✓</Text>}
-                </View>
-                <Text>Show App Name</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={styles.checkboxLabel}
-                onPress={() => setOverlayConfig({ ...overlayConfig, showUsageStats: !overlayConfig.showUsageStats })}
-              >
-                <View style={[styles.checkbox, overlayConfig.showUsageStats && styles.checkboxChecked]}>
-                  {overlayConfig.showUsageStats && <Text style={styles.checkmark}>✓</Text>}
-                </View>
-                <Text>Show Usage</Text>
-              </TouchableOpacity>
-            </View>
-            <Button title="Apply Overlay Settings" onPress={handleUpdateOverlayConfig} />
-          </>
-        )}
+          </View>
+        </View>
+        
+        <View style={styles.rowInput}>
+          <View style={styles.halfInput}>
+            <Text style={styles.labelSmall}>Height</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="60"
+              value={buttonHeight}
+              onChangeText={setButtonHeight}
+              keyboardType="numeric"
+            />
+          </View>
+          <View style={styles.halfInput}>
+            <Text style={styles.labelSmall}>Margin Top</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="40"
+              value={buttonMarginTop}
+              onChangeText={setButtonMarginTop}
+              keyboardType="numeric"
+            />
+          </View>
+        </View>
+        
+        <Button title="Apply Overlay Settings" onPress={handleUpdateOverlayConfig} />
       </View>
     </ScrollView>
   );
@@ -405,12 +457,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
     borderRadius: 8,
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
@@ -421,9 +467,13 @@ const styles = StyleSheet.create({
     color: '#666',
     marginBottom: 8,
   },
-  spacer: {
-    height: 8,
+  label: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
+    marginTop: 8,
   },
+  spacer: { height: 8 },
   input: {
     borderWidth: 1,
     borderColor: '#ccc',
@@ -442,21 +492,10 @@ const styles = StyleSheet.create({
   iconPlaceholder: {
     backgroundColor: '#ddd',
     borderRadius: 8,
-    marginRight: 12,
   },
-  appInfo: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  appName: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  usageTime: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 2,
-  },
+  appInfo: { flex: 1, marginLeft: 12 },
+  appName: { fontSize: 14, fontWeight: '500' },
+  usageTime: { fontSize: 12, color: '#666', marginTop: 2 },
   checkbox: {
     width: 24,
     height: 24,
@@ -466,29 +505,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  checkboxChecked: {
-    backgroundColor: '#4CAF50',
-    borderColor: '#4CAF50',
-  },
-  checkmark: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-  checkboxRow: {
+  checkboxChecked: { backgroundColor: '#4CAF50', borderColor: '#4CAF50' },
+  checkmark: { color: '#fff', fontWeight: 'bold' },
+  switchRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 12,
-  },
-  checkboxLabel: {
-    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginRight: 16,
-    marginBottom: 8,
+    paddingVertical: 8,
   },
-  emptyText: {
-    fontStyle: 'italic',
+  rowInput: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  halfInput: {
+    flex: 1,
+    marginHorizontal: 4,
+  },
+  labelSmall: {
+    fontSize: 12,
     color: '#666',
-    textAlign: 'center',
-    padding: 16,
+    marginBottom: 2,
   },
 });

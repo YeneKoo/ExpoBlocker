@@ -8,7 +8,8 @@ A production-ready app blocker for React Native / Expo with scheduling, app usag
 - **Schedule blocking** at specific times (HH:mm format)
 - **Exclude apps** from being blocked
 - **App usage statistics** - track how much time you spend on apps
-- **Customizable overlay UI** - change title, message, colors, and what info is shown
+- **Customizable overlay UI** - change title, message, colors, button styling
+- **Button callback** - handle button clicks on the overlay
 - **Foreground service** for reliable background operation
 - **Boot persistence** - auto-restart after device reboot
 - **Get app icons and names** for nice UI display
@@ -127,17 +128,61 @@ const icon = await AppBlocker.getAppIcon('com.instagram.android');
 // 'iVBORw0KGgoAAAANSUhEUgAAAAEAAA...'
 ```
 
+### Button Click Callback
+
+Listen for button clicks on the overlay when users tap the custom button:
+
+```typescript
+import { useButtonClickListener } from 'expo-blocker';
+
+// In your component (hook-based)
+useButtonClickListener((event) => {
+  console.log('Button clicked!', event);
+  // event = { packageName: 'com.instagram.android', action: 'open' }
+  
+  // Do something - open settings, log data, etc.
+});
+```
+
+Or use the imperative API directly:
+
+```typescript
+import { addButtonClickListener } from 'expo-blocker';
+
+const subscription = addButtonClickListener((event) => {
+  console.log('Button clicked for:', event.packageName);
+});
+
+// When done listening (e.g., component unmount)
+subscription.remove();
+```
+
 ### Customize Overlay UI
 
 ```typescript
 await AppBlocker.updateOverlayConfig({
   title: 'App Blocked 🔒',
   message: 'Time to focus on something else!',
-  backgroundColor: 0xFF1A1A1A,  // Dark background
-  textColor: 0xFFFFFFFF,        // White text
-  showAppIcon: true,            // Show app icon on overlay
-  showAppName: true,            // Show app name on overlay
-  showUsageStats: true          // Show today's usage time
+  description: 'You can customize this description.',
+  backgroundColor: 0xFF1A1A1A,
+  textColor: 0xFFFFFFFF,
+  showAppIcon: true,
+  showAppName: true,
+  showTodayUsage: true,
+});
+```
+
+### Customize Button
+
+```typescript
+await AppBlocker.updateOverlayConfig({
+  buttonText: 'Open Settings',
+  buttonColor: 0xFF4CAF50,
+  buttonTextColor: 0xFFFFFFFF,
+  buttonBorderRadius: 50,
+  buttonWidth: 280,
+  buttonHeight: 60,
+  buttonMarginTop: 40,
 });
 ```
 
@@ -170,8 +215,8 @@ console.log(state);
 
 ```typescript
 import React, { useEffect, useState } from 'react';
-import { Button, Text, View } from 'react-native';
-import AppBlocker from 'expo-blocker';
+import { Alert, Button, Text, View } from 'react-native';
+import AppBlocker, { useButtonClickListener } from 'expo-blocker';
 
 export default function App() {
   const [permissions, setPermissions] = useState(null);
@@ -180,22 +225,31 @@ export default function App() {
     checkPermissions();
   }, []);
 
+  useButtonClickListener((event) => {
+    Alert.alert(
+      'Button Clicked',
+      `User tapped button for: ${event.packageName}`,
+      [{ text: 'OK' }]
+    );
+  });
+
   const checkPermissions = async () => {
     const perms = await AppBlocker.checkPermissions();
     setPermissions(perms);
   };
 
   const startBlocking = async () => {
-    // Customize the overlay
     await AppBlocker.updateOverlayConfig({
       title: 'Blocked 🔒',
-      message: 'Stay focused!',
+      message: 'Time to focus!',
       showAppIcon: true,
       showAppName: true,
-      showUsageStats: true
+      showTodayUsage: true,
+      buttonText: 'Open Settings',
+      buttonColor: 0xFF4CAF50,
+      buttonBorderRadius: 25,
     });
 
-    // Block Instagram with your app excluded
     await AppBlocker.block(['com.instagram.android'], ['com.yourapp.package']);
   };
 
@@ -243,19 +297,58 @@ export default function App() {
 | `updateOverlayConfig(config)` | `OverlayConfig` | Customize overlay UI |
 | `getOverlayConfig()` | - | Get current overlay config |
 
-## OverlayConfig Options
+## Event Listeners
+
+| Function | Parameters | Description |
+|----------|------------|-------------|
+| `useButtonClickListener(callback)` | `function` | React hook to listen for button clicks |
+| `addButtonClickListener(callback)` | `function` | Imperative API - returns subscription with `.remove()` |
+
+### ButtonClickedEvent
 
 ```typescript
 {
-  title?: string,           // Default: "App Blocked"
-  message?: string,          // Default: "This app has been blocked"
-  backgroundColor?: number,   // Default: 0xFF1A1A1A
-  textColor?: number,        // Default: 0xFFFFFFFF
-  titleTextSize?: number,    // Default: 32
-  messageTextSize?: number,  // Default: 18
-  showAppIcon?: boolean,     // Default: true
-  showAppName?: boolean,     // Default: true
-  showUsageStats?: boolean  // Default: true
+  packageName: string,  // Package name of the blocked app
+  action: string        // Action type (e.g., 'open')
+}
+```
+
+## OverlayConfig Options
+
+### Content Options
+```typescript
+{
+  title?: string,              // Default: "App Blocked"
+  message?: string,            // Short message (optional)
+  description?: string,       // Longer description (optional)
+  backgroundColor?: number,   // Default: 0xFF1A1A1A (dark gray)
+  textColor?: number,         // Default: 0xFFFFFFFF (white)
+  titleTextSize?: number,     // Default: 32
+  messageTextSize?: number,   // Default: 18
+  descriptionTextSize?: number, // Default: 16
+}
+```
+
+### Display Options
+```typescript
+{
+  showAppIcon?: boolean,      // Show app icon (default: true)
+  showAppName?: boolean,      // Show "AppName is blocked" (default: true)
+  showTodayUsage?: boolean,   // Show today's usage time (default: false)
+  showUsageStats?: boolean,   // Show usage stats (default: false)
+}
+```
+
+### Button Options
+```typescript
+{
+  buttonText?: string,           // Button label (no button if empty)
+  buttonColor?: number,          // Button background (default: 0xFF4CAF50 green)
+  buttonTextColor?: number,      // Button text color (default: 0xFFFFFFFF white)
+  buttonBorderRadius?: number,   // Border radius in pixels (default: 50)
+  buttonWidth?: number,          // Button width in pixels (default: 280)
+  buttonHeight?: number,         // Button height in pixels (default: 60)
+  buttonMarginTop?: number,      // Space above button (default: 40)
 }
 ```
 
@@ -264,11 +357,11 @@ export default function App() {
 ```typescript
 {
   packageName: string,           // Package name (e.g., 'com.instagram.android')
-  appName: string,                // Display name (e.g., 'Instagram')
-  iconBase64: string | null,      // Base64 encoded PNG icon
-  usageTime: number,              // Time in milliseconds
-  usageTimeFormatted: string,      // Formatted (e.g., '1h 30m')
-  lastTimeUsed: number            // Timestamp of last use
+  appName: string,               // Display name (e.g., 'Instagram')
+  iconBase64: string | null,     // Base64 encoded PNG icon
+  usageTime: number,             // Time in milliseconds
+  usageTimeFormatted: string,     // Formatted (e.g., '1h 30m')
+  lastTimeUsed: number           // Timestamp of last use
 }
 ```
 

@@ -1,11 +1,17 @@
 package expo.modules.appblockerengine
 
+import android.content.IntentFilter
+import android.net.Uri
 import expo.modules.kotlin.AppContext
 import expo.modules.kotlin.Promise
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
+import expo.modules.appblockerengine.blocker.controller.ButtonClickReceiver
+import expo.modules.appblockerengine.blocker.controller.OverlayController
 
 class ExpoBlockerModule : Module() {
+    
+    private var buttonClickReceiver: ButtonClickReceiver? = null
     
     private val appBlockerManager by lazy {
         expo.modules.appblockerengine.blocker.manager.AppBlockerManager.getInstance(appContext.reactContext!!)
@@ -14,24 +20,31 @@ class ExpoBlockerModule : Module() {
     override fun definition() = ModuleDefinition {
         Name("ExpoBlocker")
         
+        // Events for button clicks
+        Events("onButtonClicked")
+        
         AsyncFunction("block") { apps: List<String>?, promise: Promise ->
             appBlockerManager.block(apps)
+            registerButtonReceiver()
             promise.resolve(mapOf("success" to true))
         }
         
         AsyncFunction("blockWithExclude") { apps: List<String>?, excludeApps: List<String>, promise: Promise ->
             appBlockerManager.block(apps, excludeApps)
+            registerButtonReceiver()
             promise.resolve(mapOf("success" to true))
         }
         
         AsyncFunction("clear") { promise: Promise ->
             appBlockerManager.clear()
+            unregisterButtonReceiver()
             promise.resolve(mapOf("success" to true))
         }
         
         AsyncFunction("schedule") { time: String, promise: Promise ->
             val success = appBlockerManager.schedule(time)
             if (success) {
+                registerButtonReceiver()
                 promise.resolve(mapOf("success" to true))
             } else {
                 promise.reject("SCHEDULE_ERROR", "Invalid time format. Use HH:mm (24-hour format)", null)
@@ -41,6 +54,7 @@ class ExpoBlockerModule : Module() {
         AsyncFunction("scheduleWithExclude") { time: String, excludeApps: List<String>, promise: Promise ->
             val success = appBlockerManager.schedule(time, excludeApps)
             if (success) {
+                registerButtonReceiver()
                 promise.resolve(mapOf("success" to true))
             } else {
                 promise.reject("SCHEDULE_ERROR", "Invalid time format. Use HH:mm (24-hour format)", null)
@@ -83,7 +97,7 @@ class ExpoBlockerModule : Module() {
         AsyncFunction("requestOverlayPermission") { promise: Promise ->
             val intent = android.content.Intent(
                 android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                android.net.Uri.parse("package:${appContext.reactContext?.packageName}")
+                Uri.parse("package:${appContext.reactContext?.packageName}")
             )
             intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
             appContext.reactContext?.startActivity(intent)
@@ -148,14 +162,27 @@ class ExpoBlockerModule : Module() {
         AsyncFunction("updateOverlayConfig") { config: Map<String, Any?>, promise: Promise ->
             val overlayConfig = expo.modules.appblockerengine.blocker.model.OverlayConfig(
                 title = config["title"] as? String ?: "App Blocked",
-                message = config["message"] as? String ?: "This app has been blocked",
+                message = config["message"] as? String,
+                description = config["description"] as? String,
                 backgroundColor = (config["backgroundColor"] as? Number)?.toInt() ?: 0xFF1A1A1A.toInt(),
                 textColor = (config["textColor"] as? Number)?.toInt() ?: 0xFFFFFFFF.toInt(),
                 titleTextSize = (config["titleTextSize"] as? Number)?.toFloat() ?: 32f,
                 messageTextSize = (config["messageTextSize"] as? Number)?.toFloat() ?: 18f,
-                showAppIcon = config["showAppIcon"] as? Boolean ?: true,
-                showAppName = config["showAppName"] as? Boolean ?: true,
-                showUsageStats = config["showUsageStats"] as? Boolean ?: true
+                descriptionTextSize = (config["descriptionTextSize"] as? Number)?.toFloat() ?: 16f,
+                showAppIcon = (config["showAppIcon"] as? Boolean) ?: true,
+                showAppName = (config["showAppName"] as? Boolean) ?: true,
+                showUsageStats = (config["showUsageStats"] as? Boolean) ?: false,
+                showTodayUsage = (config["showTodayUsage"] as? Boolean) ?: false,
+                blockerAppName = config["blockerAppName"] as? String,
+                buttonText = config["buttonText"] as? String,
+                buttonColor = (config["buttonColor"] as? Number)?.toInt() ?: 0xFF4CAF50.toInt(),
+                buttonTextColor = (config["buttonTextColor"] as? Number)?.toInt() ?: 0xFFFFFFFF.toInt(),
+                buttonBorderRadius = (config["buttonBorderRadius"] as? Number)?.toFloat() ?: 50f,
+                buttonWidth = (config["buttonWidth"] as? Number)?.toFloat() ?: 280f,
+                buttonHeight = (config["buttonHeight"] as? Number)?.toFloat() ?: 60f,
+                buttonMarginTop = (config["buttonMarginTop"] as? Number)?.toFloat() ?: 40f,
+                showCloseButton = (config["showCloseButton"] as? Boolean) ?: false,
+                closeButtonColor = (config["closeButtonColor"] as? Number)?.toInt() ?: 0xFF666666.toInt()
             )
             appBlockerManager.updateOverlayConfig(overlayConfig)
             promise.resolve(mapOf("success" to true))
@@ -166,15 +193,44 @@ class ExpoBlockerModule : Module() {
             promise.resolve(mapOf(
                 "title" to config.title,
                 "message" to config.message,
+                "description" to config.description,
                 "backgroundColor" to config.backgroundColor,
                 "textColor" to config.textColor,
                 "titleTextSize" to config.titleTextSize,
                 "messageTextSize" to config.messageTextSize,
+                "descriptionTextSize" to config.descriptionTextSize,
                 "showAppIcon" to config.showAppIcon,
                 "showAppName" to config.showAppName,
-                "showUsageStats" to config.showUsageStats
+                "showUsageStats" to config.showUsageStats,
+                "showTodayUsage" to config.showTodayUsage,
+                "blockerAppName" to config.blockerAppName,
+                "buttonText" to config.buttonText,
+                "buttonColor" to config.buttonColor,
+                "buttonTextColor" to config.buttonTextColor,
+                "buttonBorderRadius" to config.buttonBorderRadius,
+                "buttonWidth" to config.buttonWidth,
+                "buttonHeight" to config.buttonHeight,
+                "buttonMarginTop" to config.buttonMarginTop,
+                "showCloseButton" to config.showCloseButton,
+                "closeButtonColor" to config.closeButtonColor
             ))
         }
+    }
+    
+    private fun registerButtonReceiver() {
+        if (buttonClickReceiver == null) {
+            buttonClickReceiver = ButtonClickReceiver.createAndRegister(appContext.reactContext!!) { packageName ->
+                sendEvent("onButtonClicked", mapOf(
+                    "packageName" to packageName,
+                    "action" to "open"
+                ))
+            }
+        }
+    }
+    
+    private fun unregisterButtonReceiver() {
+        buttonClickReceiver?.unregister()
+        buttonClickReceiver = null
     }
     
     private fun formatUsageTime(millis: Long): String {
@@ -188,4 +244,5 @@ class ExpoBlockerModule : Module() {
             else -> "${seconds}s"
         }
     }
+    
 }

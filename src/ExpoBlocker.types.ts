@@ -15,13 +15,26 @@ export interface PermissionStatus {
 export interface OverlayConfig {
   title?: string;
   message?: string;
+  description?: string;
   backgroundColor?: number;
   textColor?: number;
   titleTextSize?: number;
   messageTextSize?: number;
+  descriptionTextSize?: number;
   showAppIcon?: boolean;
   showAppName?: boolean;
   showUsageStats?: boolean;
+  showTodayUsage?: boolean;
+  blockerAppName?: string;
+  buttonText?: string;
+  buttonColor?: number;
+  buttonTextColor?: number;
+  buttonBorderRadius?: number;
+  buttonWidth?: number;
+  buttonHeight?: number;
+  buttonMarginTop?: number;
+  showCloseButton?: boolean;
+  closeButtonColor?: number;
 }
 
 export interface AppUsageStat {
@@ -38,6 +51,11 @@ export interface AppUsageTime {
   usageTimeFormatted: string;
 }
 
+export type ButtonClickedEvent = {
+  packageName: string;
+  action: string;
+};
+
 export type ExpoBlockerModuleEvents = {
-  onBlockStateChange?: (params: BlockerState) => void;
+  onButtonClicked?: (event: ButtonClickedEvent) => void;
 };

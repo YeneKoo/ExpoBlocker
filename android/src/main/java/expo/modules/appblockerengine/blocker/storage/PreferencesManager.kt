@@ -4,8 +4,6 @@ import android.content.Context
 import android.content.SharedPreferences
 import expo.modules.appblockerengine.blocker.model.BlockerState
 import expo.modules.appblockerengine.blocker.model.OverlayConfig
-import expo.modules.appblockerengine.blocker.model.AppUsageStats
-import org.json.JSONArray
 import org.json.JSONObject
 
 class PreferencesManager(context: Context) {
@@ -24,6 +22,7 @@ class PreferencesManager(context: Context) {
         private const val KEY_SCHEDULE_ACTIVATED = "schedule_activated"
         private const val KEY_EXCLUDE_APPS = "exclude_apps"
         private const val KEY_OVERLAY_CONFIG = "overlay_config"
+        private const val KEY_BUTTON_CALLBACK = "button_callback"
         
         @Volatile
         private var instance: PreferencesManager? = null
@@ -61,14 +60,27 @@ class PreferencesManager(context: Context) {
     fun saveOverlayConfig(config: OverlayConfig) {
         val json = JSONObject().apply {
             put("title", config.title)
-            put("message", config.message)
+            put("message", config.message ?: "")
+            put("description", config.description ?: "")
             put("backgroundColor", config.backgroundColor)
             put("textColor", config.textColor)
             put("titleTextSize", config.titleTextSize.toDouble())
             put("messageTextSize", config.messageTextSize.toDouble())
+            put("descriptionTextSize", config.descriptionTextSize.toDouble())
             put("showAppIcon", config.showAppIcon)
             put("showAppName", config.showAppName)
             put("showUsageStats", config.showUsageStats)
+            put("showTodayUsage", config.showTodayUsage)
+            put("blockerAppName", config.blockerAppName ?: "")
+            put("buttonText", config.buttonText ?: "")
+            put("buttonColor", config.buttonColor)
+            put("buttonTextColor", config.buttonTextColor)
+            put("buttonBorderRadius", config.buttonBorderRadius.toDouble())
+            put("buttonWidth", config.buttonWidth.toDouble())
+            put("buttonHeight", config.buttonHeight.toDouble())
+            put("buttonMarginTop", config.buttonMarginTop.toDouble())
+            put("showCloseButton", config.showCloseButton)
+            put("closeButtonColor", config.closeButtonColor)
         }
         prefs.edit().putString(KEY_OVERLAY_CONFIG, json.toString()).apply()
     }
@@ -80,18 +92,39 @@ class PreferencesManager(context: Context) {
             val json = JSONObject(jsonStr)
             OverlayConfig(
                 title = json.optString("title", "App Blocked"),
-                message = json.optString("message", "This app has been blocked"),
+                message = json.optString("message", null).takeIf { it.isNotEmpty() },
+                description = json.optString("description", null).takeIf { it.isNotEmpty() },
                 backgroundColor = json.optInt("backgroundColor", 0xFF1A1A1A.toInt()),
                 textColor = json.optInt("textColor", 0xFFFFFFFF.toInt()),
                 titleTextSize = json.optDouble("titleTextSize", 32.0).toFloat(),
                 messageTextSize = json.optDouble("messageTextSize", 18.0).toFloat(),
+                descriptionTextSize = json.optDouble("descriptionTextSize", 16.0).toFloat(),
                 showAppIcon = json.optBoolean("showAppIcon", true),
                 showAppName = json.optBoolean("showAppName", true),
-                showUsageStats = json.optBoolean("showUsageStats", true)
+                showUsageStats = json.optBoolean("showUsageStats", false),
+                showTodayUsage = json.optBoolean("showTodayUsage", false),
+                blockerAppName = json.optString("blockerAppName", null).takeIf { it.isNotEmpty() },
+                buttonText = json.optString("buttonText", null).takeIf { it.isNotEmpty() },
+                buttonColor = json.optInt("buttonColor", 0xFF4CAF50.toInt()),
+                buttonTextColor = json.optInt("buttonTextColor", 0xFFFFFFFF.toInt()),
+                buttonBorderRadius = json.optDouble("buttonBorderRadius", 50.0).toFloat(),
+                buttonWidth = json.optDouble("buttonWidth", 280.0).toFloat(),
+                buttonHeight = json.optDouble("buttonHeight", 60.0).toFloat(),
+                buttonMarginTop = json.optDouble("buttonMarginTop", 40.0).toFloat(),
+                showCloseButton = json.optBoolean("showCloseButton", false),
+                closeButtonColor = json.optInt("closeButtonColor", 0xFF666666.toInt())
             )
         } catch (e: Exception) {
             OverlayConfig()
         }
+    }
+    
+    fun saveButtonCallback(callback: String?) {
+        prefs.edit().putString(KEY_BUTTON_CALLBACK, callback).apply()
+    }
+    
+    fun loadButtonCallback(): String? {
+        return prefs.getString(KEY_BUTTON_CALLBACK, null)
     }
     
     fun setExcludeApps(apps: List<String>) {

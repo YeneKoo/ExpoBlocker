@@ -1,11 +1,13 @@
-import ExpoBlocker from './ExpoBlockerModule';
+import ExpoBlocker, { addButtonClickListener } from './ExpoBlockerModule';
 import type { 
   BlockerState, 
   PermissionStatus, 
   OverlayConfig,
   AppUsageStat,
-  AppUsageTime 
+  AppUsageTime,
+  ButtonClickedEvent
 } from './ExpoBlocker.types';
+import { useEffect } from 'react';
 
 export class AppBlocker {
   private module = ExpoBlocker;
@@ -103,11 +105,14 @@ export class AppBlocker {
 }
 
 export default new AppBlocker();
-export { ExpoBlocker };
-export type { 
-  BlockerState, 
-  PermissionStatus, 
-  OverlayConfig,
-  AppUsageStat,
-  AppUsageTime 
-} from './ExpoBlocker.types';
+
+export { addButtonClickListener };
+
+export function useButtonClickListener(callback: (event: ButtonClickedEvent) => void) {
+  useEffect(() => {
+    const subscription = addButtonClickListener(callback);
+    return () => subscription.remove();
+  }, [callback]);
+}
+
+export type { BlockerState, PermissionStatus, OverlayConfig, AppUsageStat, AppUsageTime, ButtonClickedEvent };

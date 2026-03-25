@@ -1,15 +1,16 @@
-import { NativeModule, requireNativeModule } from 'expo';
+import { requireNativeModule } from 'expo-modules-core';
+import { NativeModules, NativeEventEmitter } from 'react-native';
 
 import { 
   BlockerState, 
-  ExpoBlockerModuleEvents, 
   PermissionStatus, 
   OverlayConfig,
   AppUsageStat,
-  AppUsageTime 
+  AppUsageTime,
+  ButtonClickedEvent
 } from './ExpoBlocker.types';
 
-declare class ExpoBlockerModule extends NativeModule<ExpoBlockerModuleEvents> {
+type ExpoBlockerNativeModule = {
   block(apps: string[] | null): Promise<{ success: boolean }>;
   blockWithExclude(apps: string[] | null, excludeApps: string[]): Promise<{ success: boolean }>;
   clear(): Promise<{ success: boolean }>;
@@ -31,6 +32,13 @@ declare class ExpoBlockerModule extends NativeModule<ExpoBlockerModuleEvents> {
   getExcludeApps(): Promise<string[]>;
   updateOverlayConfig(config: OverlayConfig): Promise<{ success: boolean }>;
   getOverlayConfig(): Promise<OverlayConfig>;
-}
+};
 
-export default requireNativeModule<ExpoBlockerModule>('ExpoBlocker');
+const NativeModule = requireNativeModule<ExpoBlockerNativeModule>('ExpoBlocker');
+const emitter = new NativeEventEmitter(NativeModules.ExpoBlocker);
+
+export default NativeModule;
+
+export function addButtonClickListener(callback: (event: ButtonClickedEvent) => void) {
+  return emitter.addListener('onButtonClicked', callback);
+}
