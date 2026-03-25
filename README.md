@@ -164,8 +164,8 @@ await AppBlocker.updateOverlayConfig({
   title: 'App Blocked 🔒',
   message: 'Time to focus on something else!',
   description: 'You can customize this description.',
-  backgroundColor: 0xFF1A1A1A,
-  textColor: 0xFFFFFFFF,
+  backgroundColor: '#1A1A1A',
+  textColor: '#FFFFFF',
   showAppIcon: true,
   showAppName: true,
   showTodayUsage: true,
@@ -177,11 +177,12 @@ await AppBlocker.updateOverlayConfig({
 ```typescript
 await AppBlocker.updateOverlayConfig({
   buttonText: 'Open Settings',
-  buttonColor: 0xFF4CAF50,
-  buttonTextColor: 0xFFFFFFFF,
-  buttonBorderRadius: 50,
-  buttonWidth: 280,
-  buttonHeight: 60,
+  buttonLink: 'expo://home',        // Optional: Navigate to URL/scheme
+  buttonColor: '#4CAF50',           // Hex color string
+  buttonTextColor: '#FFFFFF',      // Hex color string
+  buttonBorderRadius: 25,
+  buttonWidth: 200,
+  buttonHeight: 50,
   buttonMarginTop: 40,
 });
 ```
@@ -242,11 +243,15 @@ export default function App() {
     await AppBlocker.updateOverlayConfig({
       title: 'Blocked 🔒',
       message: 'Time to focus!',
+      backgroundColor: '#1A1A1A',
+      textColor: '#FFFFFF',
       showAppIcon: true,
       showAppName: true,
       showTodayUsage: true,
       buttonText: 'Open Settings',
-      buttonColor: 0xFF4CAF50,
+      buttonLink: 'expo://home',
+      buttonColor: '#4CAF50',
+      buttonTextColor: '#FFFFFF',
       buttonBorderRadius: 25,
     });
 
@@ -321,8 +326,8 @@ export default function App() {
   title?: string,              // Default: "App Blocked"
   message?: string,            // Short message (optional)
   description?: string,       // Longer description (optional)
-  backgroundColor?: number,   // Default: 0xFF1A1A1A (dark gray)
-  textColor?: number,         // Default: 0xFFFFFFFF (white)
+  backgroundColor?: string,   // Default: "#1A1A1A" (dark gray)
+  textColor?: string,         // Default: "#FFFFFF" (white)
   titleTextSize?: number,     // Default: 32
   messageTextSize?: number,   // Default: 18
   descriptionTextSize?: number, // Default: 16
@@ -343,14 +348,22 @@ export default function App() {
 ```typescript
 {
   buttonText?: string,           // Button label (no button if empty)
-  buttonColor?: number,          // Button background (default: 0xFF4CAF50 green)
-  buttonTextColor?: number,      // Button text color (default: 0xFFFFFFFF white)
+  buttonLink?: string,           // Optional URL/scheme to navigate to (e.g., 'expo://home', 'https://google.com')
+  buttonColor?: string,          // Button background hex color (default: "#4CAF50")
+  buttonTextColor?: string,      // Button text hex color (default: "#FFFFFF")
   buttonBorderRadius?: number,   // Border radius in pixels (default: 50)
   buttonWidth?: number,          // Button width in pixels (default: 280)
   buttonHeight?: number,         // Button height in pixels (default: 60)
   buttonMarginTop?: number,      // Space above button (default: 40)
 }
 ```
+
+### Close Button Options
+```typescript
+{
+  showCloseButton?: boolean,     // Show close button (default: false)
+  closeButtonColor?: string,     // Close button hex color (default: "#666666")
+}
 
 ## AppUsageStat Object
 

@@ -30,6 +30,7 @@ export default function App() {
   const [state, setState] = useState<BlockerState | null>(null);
   const [permissions, setPermissions] = useState<PermissionStatus | null>(null);
   const [apps, setApps] = useState<AppUsageStat[]>([]);
+  const [installedApps, setInstalledApps] = useState<string[]>([]);
   const [selectedApps, setSelectedApps] = useState<string[]>([]);
   const [excludeApps, setExcludeApps] = useState<string[]>([]);
   const [scheduleTime, setScheduleTime] = useState('');
@@ -40,7 +41,8 @@ export default function App() {
   const [customTitle, setCustomTitle] = useState('App Blocked');
   const [customMessage, setCustomMessage] = useState('');
   const [customDescription, setCustomDescription] = useState('');
-  const [customButtonText, setCustomButtonText] = useState('Open Settings');
+  const [customButtonText, setCustomButtonText] = useState('Open App');
+  const [customButtonLink, setCustomButtonLink] = useState('expo://home');
   const [showTodayUsage, setShowTodayUsage] = useState(false);
   // Button customization
   const [buttonBorderRadius, setButtonBorderRadius] = useState('50');
@@ -78,6 +80,9 @@ export default function App() {
       if (perms.usageStats) {
         const usageStats = await AppBlocker.getUsageStats();
         setApps(usageStats);
+        
+        const installed = await AppBlocker.getInstalledApps();
+        setInstalledApps(installed);
       }
     } catch (error) {
       console.error('Initialization error:', error);
@@ -93,6 +98,7 @@ export default function App() {
         message: customMessage || undefined,
         description: customDescription || undefined,
         buttonText: customButtonText || undefined,
+        buttonLink: customButtonLink || undefined,
         showAppIcon: overlayConfig.showAppIcon,
         showAppName: overlayConfig.showAppName,
         showTodayUsage: showTodayUsage,
@@ -101,7 +107,10 @@ export default function App() {
         buttonWidth: parseInt(buttonWidth) || 280,
         buttonHeight: parseInt(buttonHeight) || 60,
         buttonMarginTop: parseInt(buttonMarginTop) || 40,
-        buttonColor: parseInt(buttonColor.replace('#', '0xFF')) || 0xFF4CAF50,
+        buttonColor: buttonColor || '#4CAF50',
+        buttonTextColor: '#FFFFFF',
+        backgroundColor: '#1A1A1A',
+        textColor: '#FFFFFF',
       };
       
       await AppBlocker.updateOverlayConfig(config);
@@ -269,49 +278,55 @@ export default function App() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Exclude Apps ({excludeApps.length})</Text>
         <Text style={styles.hint}>These apps will never be blocked</Text>
-        <FlatList
-          data={apps.slice(0, 15)}
-          keyExtractor={(item) => item.packageName}
-          scrollEnabled={false}
-          renderItem={({ item }) => (
-            <TouchableOpacity 
-              style={styles.appItem}
-              onPress={() => toggleExcludeSelection(item.packageName)}
-            >
-              {renderAppIcon(item.iconBase64, 40)}
-              <View style={styles.appInfo}>
-                <Text style={styles.appName} numberOfLines={1}>{item.appName}</Text>
-              </View>
-              <View style={[styles.checkbox, excludeApps.includes(item.packageName) && styles.checkboxChecked]}>
-                {excludeApps.includes(item.packageName) && <Text style={styles.checkmark}>✓</Text>}
-              </View>
-            </TouchableOpacity>
-          )}
-        />
+        {installedApps.length === 0 ? (
+          <Text style={styles.hint}>Loading apps...</Text>
+        ) : (
+          <FlatList
+            data={installedApps.slice(0, 30)}
+            keyExtractor={(item) => item}
+            scrollEnabled={false}
+            renderItem={({ item }) => (
+              <TouchableOpacity 
+                style={styles.appItem}
+                onPress={() => toggleExcludeSelection(item)}
+              >
+                <View style={styles.appInfo}>
+                  <Text style={styles.appName} numberOfLines={1}>{item}</Text>
+                </View>
+                <View style={[styles.checkbox, excludeApps.includes(item) && styles.checkboxChecked]}>
+                  {excludeApps.includes(item) && <Text style={styles.checkmark}>✓</Text>}
+                </View>
+              </TouchableOpacity>
+            )}
+          />
+        )}
       </View>
 
       {/* Select Apps to Block */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Select Apps to Block ({selectedApps.length})</Text>
-        <FlatList
-          data={apps.slice(0, 15)}
-          keyExtractor={(item) => item.packageName}
-          scrollEnabled={false}
-          renderItem={({ item }) => (
-            <TouchableOpacity 
-              style={styles.appItem}
-              onPress={() => toggleAppSelection(item.packageName)}
-            >
-              {renderAppIcon(item.iconBase64, 40)}
-              <View style={styles.appInfo}>
-                <Text style={styles.appName} numberOfLines={1}>{item.appName}</Text>
-              </View>
-              <View style={[styles.checkbox, selectedApps.includes(item.packageName) && styles.checkboxChecked]}>
-                {selectedApps.includes(item.packageName) && <Text style={styles.checkmark}>✓</Text>}
-              </View>
-            </TouchableOpacity>
-          )}
-        />
+        {installedApps.length === 0 ? (
+          <Text style={styles.hint}>Loading apps...</Text>
+        ) : (
+          <FlatList
+            data={installedApps.slice(0, 30)}
+            keyExtractor={(item) => item}
+            scrollEnabled={false}
+            renderItem={({ item }) => (
+              <TouchableOpacity 
+                style={styles.appItem}
+                onPress={() => toggleAppSelection(item)}
+              >
+                <View style={styles.appInfo}>
+                  <Text style={styles.appName} numberOfLines={1}>{item}</Text>
+                </View>
+                <View style={[styles.checkbox, selectedApps.includes(item) && styles.checkboxChecked]}>
+                  {selectedApps.includes(item) && <Text style={styles.checkmark}>✓</Text>}
+                </View>
+              </TouchableOpacity>
+            )}
+          />
+        )}
         {selectedApps.length > 0 && (
           <Button title={`Block Selected (${selectedApps.length})`} onPress={handleBlock} />
         )}
@@ -352,6 +367,21 @@ export default function App() {
           value={customButtonText}
           onChangeText={setCustomButtonText}
         />
+        
+        <Text style={styles.label}>Button Link (optional)</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="e.g., expo://home or https://youtube.com"
+          value={customButtonLink}
+          onChangeText={setCustomButtonLink}
+        />
+        
+        <View style={styles.hintRow}>
+          <Text style={styles.hintText}>Examples: </Text>
+          <Text style={styles.linkExample} onPress={() => setCustomButtonLink('expo://home')}>expo://home</Text>
+          <Text style={styles.hintText}> | </Text>
+          <Text style={styles.linkExample} onPress={() => setCustomButtonLink('https://youtube.com')}>youtube.com</Text>
+        </View>
         
         <View style={styles.switchRow}>
           <Text>Show App Icon</Text>
@@ -525,5 +555,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     marginBottom: 2,
+  },
+  hintRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    marginBottom: 12,
+    marginTop: -4,
+  },
+  hintText: {
+    fontSize: 11,
+    color: '#999',
+  },
+  linkExample: {
+    fontSize: 11,
+    color: '#4CAF50',
+    fontWeight: '500',
   },
 });

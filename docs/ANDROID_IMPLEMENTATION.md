@@ -307,7 +307,7 @@ android/src/main/java/expo/modules/appblockerengine/
     ├── manager/
     │   └── AppBlockerManager.kt
     ├── model/
-    │   └── BlockerState.kt
+    │   └── Models.kt (OverlayConfig, BlockerState, AppInfo, etc.)
     ├── monitor/
     │   └── AppMonitor.kt
     ├── receiver/
@@ -318,6 +318,85 @@ android/src/main/java/expo/modules/appblockerengine/
     │   └── PreferencesManager.kt
     └── util/
         └── TimeUtils.kt
+```
+
+## Overlay Configuration
+
+The `OverlayConfig` data class in `Models.kt` defines the appearance of the blocking overlay:
+
+```kotlin
+data class OverlayConfig(
+    val title: String = "App Blocked",
+    val message: String? = null,
+    val description: String? = null,
+    val backgroundColor: String = "#1A1A1A",    // Hex color string
+    val textColor: String = "#FFFFFF",           // Hex color string
+    val titleTextSize: Float = 32f,
+    val messageTextSize: Float = 18f,
+    val descriptionTextSize: Float = 16f,
+    val showAppIcon: Boolean = true,
+    val showAppName: Boolean = true,
+    val showUsageStats: Boolean = false,
+    val showTodayUsage: Boolean = false,
+    val blockerAppName: String? = null,
+    val buttonText: String? = null,
+    val buttonLink: String? = null,              // URL/scheme to navigate to
+    val buttonColor: String = "#4CAF50",         // Hex color string
+    val buttonTextColor: String = "#FFFFFF",    // Hex color string
+    val buttonBorderRadius: Float = 50f,
+    val buttonWidth: Float = 280f,
+    val buttonHeight: Float = 60f,
+    val buttonMarginTop: Float = 40f,
+    val showCloseButton: Boolean = false,
+    val closeButtonColor: String = "#666666"     // Hex color string
+)
+```
+
+### Hex Color Support
+
+Colors are now specified as hex strings (e.g., `"#FF4CAF50"` or `"#4CAF50"`). A helper function converts these to Android color integers:
+
+```kotlin
+fun String.toColorInt(): Int {
+    val hex = this.removePrefix("#")
+    return android.graphics.Color.parseColor("#$hex")
+}
+```
+
+### Button Link Navigation
+
+When `buttonLink` is set, clicking the button will:
+1. Navigate to the specified URL/scheme using an Intent
+2. Fire the `onButtonClicked` event (for callback handling)
+
+Supported link formats:
+- `expo://home` - Expo deep links
+- `myapp://settings` - Custom app schemes
+- `https://example.com` - Web URLs
+
+### Button Click Event
+
+The button click triggers two actions:
+1. **Navigation**: If `buttonLink` is set, opens the URL/scheme
+2. **Event**: Fires `onButtonClicked` event for JS callback handling
+
+```kotlin
+button.setOnClickListener {
+    val link = config.buttonLink
+    if (!link.isNullOrEmpty()) {
+        try {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(link))
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+    // Fire event for JS callback
+    val intent = Intent(ACTION_BUTTON_CLICKED)
+    intent.putExtra("packageName", appInfo.packageName)
+    context.sendBroadcast(intent)
+}
 ```
 
 ## Limitations

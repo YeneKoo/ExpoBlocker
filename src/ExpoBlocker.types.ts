@@ -16,8 +16,8 @@ export interface OverlayConfig {
   title?: string;
   message?: string;
   description?: string;
-  backgroundColor?: number;
-  textColor?: number;
+  backgroundColor?: string;
+  textColor?: string;
   titleTextSize?: number;
   messageTextSize?: number;
   descriptionTextSize?: number;
@@ -27,14 +27,15 @@ export interface OverlayConfig {
   showTodayUsage?: boolean;
   blockerAppName?: string;
   buttonText?: string;
-  buttonColor?: number;
-  buttonTextColor?: number;
+  buttonLink?: string;
+  buttonColor?: string;
+  buttonTextColor?: string;
   buttonBorderRadius?: number;
   buttonWidth?: number;
   buttonHeight?: number;
   buttonMarginTop?: number;
   showCloseButton?: boolean;
-  closeButtonColor?: number;
+  closeButtonColor?: string;
 }
 
 export interface AppUsageStat {

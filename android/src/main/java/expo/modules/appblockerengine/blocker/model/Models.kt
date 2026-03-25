@@ -13,8 +13,8 @@ data class OverlayConfig(
     val title: String = "App Blocked",
     val message: String? = null,
     val description: String? = null,
-    val backgroundColor: Int = 0xFF1A1A1A.toInt(),
-    val textColor: Int = 0xFFFFFFFF.toInt(),
+    val backgroundColor: String = "#1A1A1A",
+    val textColor: String = "#FFFFFF",
     val titleTextSize: Float = 32f,
     val messageTextSize: Float = 18f,
     val descriptionTextSize: Float = 16f,
@@ -24,14 +24,15 @@ data class OverlayConfig(
     val showTodayUsage: Boolean = false,
     val blockerAppName: String? = null,
     val buttonText: String? = null,
-    val buttonColor: Int = 0xFF4CAF50.toInt(),
-    val buttonTextColor: Int = 0xFFFFFFFF.toInt(),
+    val buttonLink: String? = null,
+    val buttonColor: String = "#4CAF50",
+    val buttonTextColor: String = "#FFFFFF",
     val buttonBorderRadius: Float = 50f,
     val buttonWidth: Float = 280f,
     val buttonHeight: Float = 60f,
     val buttonMarginTop: Float = 40f,
     val showCloseButton: Boolean = false,
-    val closeButtonColor: Int = 0xFF666666.toInt()
+    val closeButtonColor: String = "#666666"
 )
 
 data class AppInfo(
@@ -48,3 +49,8 @@ data class AppUsageStats(
     val usageTime: Long,
     val lastTimeUsed: Long
 )
+
+fun String.toColorInt(): Int {
+    val hex = this.removePrefix("#")
+    return android.graphics.Color.parseColor("#$hex")
+}

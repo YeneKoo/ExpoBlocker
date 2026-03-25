@@ -8,6 +8,7 @@ import android.graphics.BitmapFactory
 import android.graphics.PixelFormat
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -21,6 +22,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import expo.modules.appblockerengine.blocker.model.AppInfo
 import expo.modules.appblockerengine.blocker.model.OverlayConfig
+import expo.modules.appblockerengine.blocker.model.toColorInt
 
 class OverlayController(private val context: Context) {
     
@@ -96,7 +98,7 @@ class OverlayController(private val context: Context) {
         val config = currentConfig
         
         val container = FrameLayout(context).apply {
-            setBackgroundColor(config.backgroundColor)
+            setBackgroundColor(config.backgroundColor.toColorInt())
         }
         
         val mainLayout = LinearLayout(context).apply {
@@ -145,7 +147,7 @@ class OverlayController(private val context: Context) {
             val appNameText = TextView(context).apply {
                 text = "${appInfo.appName} is blocked"
                 textSize = 28f
-                setTextColor(config.textColor)
+                setTextColor(config.textColor.toColorInt())
                 gravity = Gravity.CENTER
                 setTypeface(typeface, Typeface.BOLD)
                 layoutParams = LinearLayout.LayoutParams(
@@ -163,7 +165,7 @@ class OverlayController(private val context: Context) {
             val messageText = TextView(context).apply {
                 text = config.message
                 textSize = config.messageTextSize
-                setTextColor(config.textColor)
+                setTextColor(config.textColor.toColorInt())
                 gravity = Gravity.CENTER
                 alpha = 0.85f
                 layoutParams = LinearLayout.LayoutParams(
@@ -181,7 +183,7 @@ class OverlayController(private val context: Context) {
             val descriptionText = TextView(context).apply {
                 text = config.description
                 textSize = config.descriptionTextSize
-                setTextColor(config.textColor)
+                setTextColor(config.textColor.toColorInt())
                 gravity = Gravity.CENTER
                 alpha = 0.65f
                 layoutParams = LinearLayout.LayoutParams(
@@ -199,7 +201,7 @@ class OverlayController(private val context: Context) {
             val usageText = TextView(context).apply {
                 text = "Today's usage: ${formatUsageTime(appInfo.usageTime)}"
                 textSize = 15f
-                setTextColor(config.textColor)
+                setTextColor(config.textColor.toColorInt())
                 gravity = Gravity.CENTER
                 alpha = 0.7f
                 layoutParams = LinearLayout.LayoutParams(
@@ -230,13 +232,13 @@ class OverlayController(private val context: Context) {
             
             val button = Button(context).apply {
                 text = config.buttonText
-                setTextColor(config.buttonTextColor)
+                setTextColor(config.buttonTextColor.toColorInt())
                 textSize = 16f
                 setTypeface(typeface, Typeface.BOLD)
                 gravity = Gravity.CENTER
                 
                 val drawable = GradientDrawable().apply {
-                    setColor(config.buttonColor)
+                    setColor(config.buttonColor.toColorInt())
                     cornerRadius = config.buttonBorderRadius
                 }
                 background = drawable
@@ -253,6 +255,16 @@ class OverlayController(private val context: Context) {
             }
             
             button.setOnClickListener {
+                val link = config.buttonLink
+                if (!link.isNullOrEmpty()) {
+                    try {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(link))
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        context.startActivity(intent)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
                 val intent = Intent(ACTION_BUTTON_CLICKED)
                 intent.putExtra("packageName", appInfo.packageName)
                 context.sendBroadcast(intent)

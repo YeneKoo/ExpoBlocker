@@ -73,6 +73,7 @@ class PreferencesManager(context: Context) {
             put("showTodayUsage", config.showTodayUsage)
             put("blockerAppName", config.blockerAppName ?: "")
             put("buttonText", config.buttonText ?: "")
+            put("buttonLink", config.buttonLink ?: "")
             put("buttonColor", config.buttonColor)
             put("buttonTextColor", config.buttonTextColor)
             put("buttonBorderRadius", config.buttonBorderRadius.toDouble())
@@ -94,8 +95,8 @@ class PreferencesManager(context: Context) {
                 title = json.optString("title", "App Blocked"),
                 message = json.optString("message", null).takeIf { it.isNotEmpty() },
                 description = json.optString("description", null).takeIf { it.isNotEmpty() },
-                backgroundColor = json.optInt("backgroundColor", 0xFF1A1A1A.toInt()),
-                textColor = json.optInt("textColor", 0xFFFFFFFF.toInt()),
+                backgroundColor = json.optString("backgroundColor", "#1A1A1A"),
+                textColor = json.optString("textColor", "#FFFFFF"),
                 titleTextSize = json.optDouble("titleTextSize", 32.0).toFloat(),
                 messageTextSize = json.optDouble("messageTextSize", 18.0).toFloat(),
                 descriptionTextSize = json.optDouble("descriptionTextSize", 16.0).toFloat(),
@@ -105,14 +106,15 @@ class PreferencesManager(context: Context) {
                 showTodayUsage = json.optBoolean("showTodayUsage", false),
                 blockerAppName = json.optString("blockerAppName", null).takeIf { it.isNotEmpty() },
                 buttonText = json.optString("buttonText", null).takeIf { it.isNotEmpty() },
-                buttonColor = json.optInt("buttonColor", 0xFF4CAF50.toInt()),
-                buttonTextColor = json.optInt("buttonTextColor", 0xFFFFFFFF.toInt()),
+                buttonLink = json.optString("buttonLink", null).takeIf { it.isNotEmpty() },
+                buttonColor = json.optString("buttonColor", "#4CAF50"),
+                buttonTextColor = json.optString("buttonTextColor", "#FFFFFF"),
                 buttonBorderRadius = json.optDouble("buttonBorderRadius", 50.0).toFloat(),
                 buttonWidth = json.optDouble("buttonWidth", 280.0).toFloat(),
                 buttonHeight = json.optDouble("buttonHeight", 60.0).toFloat(),
                 buttonMarginTop = json.optDouble("buttonMarginTop", 40.0).toFloat(),
                 showCloseButton = json.optBoolean("showCloseButton", false),
-                closeButtonColor = json.optInt("closeButtonColor", 0xFF666666.toInt())
+                closeButtonColor = json.optString("closeButtonColor", "#666666")
             )
         } catch (e: Exception) {
             OverlayConfig()

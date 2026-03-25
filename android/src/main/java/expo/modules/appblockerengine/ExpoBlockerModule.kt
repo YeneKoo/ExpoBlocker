@@ -164,8 +164,8 @@ class ExpoBlockerModule : Module() {
                 title = config["title"] as? String ?: "App Blocked",
                 message = config["message"] as? String,
                 description = config["description"] as? String,
-                backgroundColor = (config["backgroundColor"] as? Number)?.toInt() ?: 0xFF1A1A1A.toInt(),
-                textColor = (config["textColor"] as? Number)?.toInt() ?: 0xFFFFFFFF.toInt(),
+                backgroundColor = config["backgroundColor"] as? String ?: "#1A1A1A",
+                textColor = config["textColor"] as? String ?: "#FFFFFF",
                 titleTextSize = (config["titleTextSize"] as? Number)?.toFloat() ?: 32f,
                 messageTextSize = (config["messageTextSize"] as? Number)?.toFloat() ?: 18f,
                 descriptionTextSize = (config["descriptionTextSize"] as? Number)?.toFloat() ?: 16f,
@@ -175,14 +175,15 @@ class ExpoBlockerModule : Module() {
                 showTodayUsage = (config["showTodayUsage"] as? Boolean) ?: false,
                 blockerAppName = config["blockerAppName"] as? String,
                 buttonText = config["buttonText"] as? String,
-                buttonColor = (config["buttonColor"] as? Number)?.toInt() ?: 0xFF4CAF50.toInt(),
-                buttonTextColor = (config["buttonTextColor"] as? Number)?.toInt() ?: 0xFFFFFFFF.toInt(),
+                buttonLink = config["buttonLink"] as? String,
+                buttonColor = config["buttonColor"] as? String ?: "#4CAF50",
+                buttonTextColor = config["buttonTextColor"] as? String ?: "#FFFFFF",
                 buttonBorderRadius = (config["buttonBorderRadius"] as? Number)?.toFloat() ?: 50f,
                 buttonWidth = (config["buttonWidth"] as? Number)?.toFloat() ?: 280f,
                 buttonHeight = (config["buttonHeight"] as? Number)?.toFloat() ?: 60f,
                 buttonMarginTop = (config["buttonMarginTop"] as? Number)?.toFloat() ?: 40f,
                 showCloseButton = (config["showCloseButton"] as? Boolean) ?: false,
-                closeButtonColor = (config["closeButtonColor"] as? Number)?.toInt() ?: 0xFF666666.toInt()
+                closeButtonColor = config["closeButtonColor"] as? String ?: "#666666"
             )
             appBlockerManager.updateOverlayConfig(overlayConfig)
             promise.resolve(mapOf("success" to true))

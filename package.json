@@ -32,7 +32,11 @@
   "author": "Naol-bm <naolbm@yenekoo.com> (NaolBM)",
   "license": "MIT",
   "homepage": "https://github.com/YeneKoo/ExpoBlocker#readme",
-  "dependencies": {},
+  "dependencies": {
+    "expo": "~55.0.8",
+    "react": "19.2.0",
+    "react-native": "0.83.2"
+  },
   "devDependencies": {
     "@types/react": "~19.1.1",
     "expo-module-scripts": "^55.0.2",
