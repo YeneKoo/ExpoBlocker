@@ -1,5 +1,7 @@
 # expo-blocker
 
+> **Note**: Currently Android only. iOS support coming soon (requires Apple Family Controls entitlement).
+
 A production-ready app blocker for React Native / Expo with scheduling, app usage tracking, and customizable UI.
 
 ## Features
