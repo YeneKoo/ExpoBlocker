@@ -1,6 +1,6 @@
 {
   "name": "expo-blocker",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "App blocker for React Native/Expo with scheduling, app usage tracking, and customizable overlay UI",
   "main": "build/index.js",
   "types": "build/index.d.ts",
