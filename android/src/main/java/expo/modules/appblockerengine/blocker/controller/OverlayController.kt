@@ -258,25 +258,17 @@ class OverlayController(private val context: Context) {
                 val link = config.buttonLink
                 if (!link.isNullOrEmpty()) {
                     try {
-                        var intent: Intent? = null
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(link))
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         
-                        // Handle different URL schemes
-                        when {
-                            link.startsWith("http://") || link.startsWith("https://") -> {
-                                intent = Intent(Intent.ACTION_VIEW, Uri.parse(link))
-                            }
-                            link.startsWith("expo://") || link.startsWith("myapp://") || link.contains("://") -> {
-                                // Custom scheme - try to open directly
-                                intent = Intent(Intent.ACTION_VIEW, Uri.parse(link))
-                            }
-                            else -> {
-                                // Try as a URL without scheme
-                                intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://$link"))
-                            }
+                        val resolveInfo = context.packageManager.resolveActivity(intent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)
+                        if (resolveInfo != null) {
+                            context.startActivity(intent)
+                        } else {
+                            val chooserIntent = Intent.createChooser(intent, "Open with")
+                            chooserIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            context.startActivity(chooserIntent)
                         }
-                        
-                        intent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        context.startActivity(intent)
                     } catch (e: Exception) {
                         e.printStackTrace()
                     }
