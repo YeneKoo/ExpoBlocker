@@ -258,16 +258,33 @@ class OverlayController(private val context: Context) {
                 val link = config.buttonLink
                 if (!link.isNullOrEmpty()) {
                     try {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(link))
-                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        var intent: Intent? = null
+                        
+                        // Handle different URL schemes
+                        when {
+                            link.startsWith("http://") || link.startsWith("https://") -> {
+                                intent = Intent(Intent.ACTION_VIEW, Uri.parse(link))
+                            }
+                            link.startsWith("expo://") || link.startsWith("myapp://") || link.contains("://") -> {
+                                // Custom scheme - try to open directly
+                                intent = Intent(Intent.ACTION_VIEW, Uri.parse(link))
+                            }
+                            else -> {
+                                // Try as a URL without scheme
+                                intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://$link"))
+                            }
+                        }
+                        
+                        intent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         context.startActivity(intent)
                     } catch (e: Exception) {
                         e.printStackTrace()
                     }
                 }
-                val intent = Intent(ACTION_BUTTON_CLICKED)
-                intent.putExtra("packageName", appInfo.packageName)
-                context.sendBroadcast(intent)
+                // Fire event for JS callback
+                val eventIntent = Intent(ACTION_BUTTON_CLICKED)
+                eventIntent.putExtra("packageName", appInfo.packageName)
+                context.sendBroadcast(eventIntent)
             }
             
             buttonWrapper.addView(button)

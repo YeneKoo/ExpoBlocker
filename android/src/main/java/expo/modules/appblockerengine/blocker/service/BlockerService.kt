@@ -173,6 +173,10 @@ class BlockerService : Service() {
         )
         
         if (shouldBlock) {
+            // Reload config from preferences to get latest settings
+            val latestConfig = preferencesManager.loadOverlayConfig()
+            overlayController.updateConfig(latestConfig)
+            
             val appName = appMonitor.getAppName(currentApp)
             val usageTime = appMonitor.getUsageTimeForPackage(currentApp)
             
