@@ -34,6 +34,9 @@ class OverlayController(private val context: Context) {
     private var currentConfig: OverlayConfig = OverlayConfig()
     private var currentAppInfo: AppInfo? = null
     private var buttonClickReceiver: BroadcastReceiver? = null
+    private var hideRunnable: Runnable? = null
+    private var isHidePending = false
+    private val hideDelayMs = 300L
     
     private val layoutParams: WindowManager.LayoutParams by lazy {
         WindowManager.LayoutParams(
@@ -79,6 +82,9 @@ class OverlayController(private val context: Context) {
     }
     
     fun showOverlayWithInfo(appInfo: AppInfo) {
+        hideRunnable?.let { handler.removeCallbacks(it) }
+        isHidePending = false
+        
         currentAppInfo = appInfo
         handler.post {
             if (overlayView != null) {
@@ -300,6 +306,34 @@ class OverlayController(private val context: Context) {
     }
     
     fun hideOverlay() {
+        if (isHidePending) {
+            return
+        }
+        
+        isHidePending = true
+        
+        hideRunnable = Runnable {
+            handler.post {
+                overlayView?.let {
+                    try {
+                        windowManager.removeView(it)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                    overlayView = null
+                }
+                currentAppInfo = null
+                isHidePending = false
+            }
+        }
+        
+        handler.postDelayed(hideRunnable!!, hideDelayMs)
+    }
+    
+    fun hideOverlayImmediate() {
+        hideRunnable?.let { handler.removeCallbacks(it) }
+        isHidePending = false
+        
         handler.post {
             overlayView?.let {
                 try {

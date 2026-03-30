@@ -27,6 +27,9 @@ class BlockerService : Service() {
     private val handler = Handler(Looper.getMainLooper())
     private var isMonitoring = false
     
+    private var lastBlockedPackage: String? = null
+    private var lastConfigHash: Int = 0
+    
     private val monitorRunnable = object : Runnable {
         override fun run() {
             if (isMonitoring) {
@@ -39,7 +42,7 @@ class BlockerService : Service() {
     companion object {
         const val CHANNEL_ID = "app_blocker_channel"
         const val NOTIFICATION_ID = 1001
-        const val POLLING_INTERVAL = 500L
+        const val POLLING_INTERVAL = 1000L
         
         const val ACTION_START = "expo.modules.appblockerengine.action.START"
         const val ACTION_STOP = "expo.modules.appblockerengine.action.STOP"
@@ -152,18 +155,30 @@ class BlockerService : Service() {
         val state = preferencesManager.loadState()
         
         if (!state.isBlocking && !state.scheduleActivated) {
-            overlayController.hideOverlay()
+            if (overlayController.isOverlayShowing()) {
+                overlayController.hideOverlay()
+                lastBlockedPackage = null
+            }
             return
         }
         
         if (state.scheduleActivated && state.scheduledTime != null) {
             if (!TimeUtils.isTimeReached(state.scheduledTime)) {
-                overlayController.hideOverlay()
+                if (overlayController.isOverlayShowing()) {
+                    overlayController.hideOverlay()
+                    lastBlockedPackage = null
+                }
                 return
             }
         }
         
-        val currentApp = appMonitor.getCurrentForegroundApp() ?: return
+        val currentApp = appMonitor.getCurrentForegroundApp() ?: run {
+            if (overlayController.isOverlayShowing()) {
+                overlayController.hideOverlay()
+                lastBlockedPackage = null
+            }
+            return
+        }
         
         val shouldBlock = appMonitor.shouldBlockPackage(
             currentApp,
@@ -173,8 +188,18 @@ class BlockerService : Service() {
         )
         
         if (shouldBlock) {
-            // Reload config from preferences to get latest settings
             val latestConfig = preferencesManager.loadOverlayConfig()
+            val configHash = latestConfig.hashCode()
+            
+            if (lastBlockedPackage == currentApp && 
+                overlayController.isOverlayShowing() && 
+                configHash == lastConfigHash) {
+                return
+            }
+            
+            lastBlockedPackage = currentApp
+            lastConfigHash = configHash
+            
             overlayController.updateConfig(latestConfig)
             
             val appName = appMonitor.getAppName(currentApp)
@@ -189,7 +214,10 @@ class BlockerService : Service() {
             
             overlayController.showOverlayWithInfo(appInfo)
         } else {
-            overlayController.hideOverlay()
+            if (overlayController.isOverlayShowing()) {
+                overlayController.hideOverlay()
+                lastBlockedPackage = null
+            }
         }
     }
     
