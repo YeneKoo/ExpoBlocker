@@ -36,6 +36,7 @@ class AppBlockerManager private constructor(private val context: Context) {
             blockedApps = apps ?: emptyList(),
             blockAll = apps == null || apps.isEmpty(),
             scheduledTime = currentState.scheduledTime,
+            scheduledAtMillis = currentState.scheduledAtMillis,
             scheduleActivated = currentState.scheduleActivated,
             excludeApps = mergedExcludeApps
         )
@@ -50,6 +51,7 @@ class AppBlockerManager private constructor(private val context: Context) {
             blockedApps = emptyList(),
             blockAll = false,
             scheduledTime = null,
+            scheduledAtMillis = null,
             scheduleActivated = false,
             excludeApps = emptyList()
         )
@@ -59,14 +61,16 @@ class AppBlockerManager private constructor(private val context: Context) {
     }
     
     fun schedule(time: String, excludeApps: List<String> = emptyList()): Boolean {
-        val parsed = TimeUtils.parseTime(time)
-        if (parsed == null) {
-            return false
-        }
+        val dateTime = TimeUtils.getNextDateTimeForTime(time) ?: return false
+        return scheduleAt(dateTime, excludeApps)
+    }
+    
+    fun scheduleAt(dateTime: String, excludeApps: List<String> = emptyList()): Boolean {
+        val scheduledAtMillis = TimeUtils.parseDateTimeToMillis(dateTime) ?: return false
         
         val currentState = preferencesManager.loadState()
         
-        val scheduleActivated = TimeUtils.isTimeReached(time)
+        val scheduleActivated = System.currentTimeMillis() >= scheduledAtMillis
         
         val mergedExcludeApps = (excludeApps + currentState.excludeApps + context.packageName).distinct()
         
@@ -74,7 +78,8 @@ class AppBlockerManager private constructor(private val context: Context) {
             isBlocking = currentState.isBlocking || scheduleActivated,
             blockedApps = currentState.blockedApps,
             blockAll = currentState.blockAll,
-            scheduledTime = time,
+            scheduledTime = dateTime,
+            scheduledAtMillis = scheduledAtMillis,
             scheduleActivated = scheduleActivated,
             excludeApps = mergedExcludeApps
         )
@@ -104,8 +109,9 @@ class AppBlockerManager private constructor(private val context: Context) {
     fun getState(): BlockerState {
         val state = preferencesManager.loadState()
         
-        if (state.scheduleActivated && state.scheduledTime != null) {
-            if (!TimeUtils.isTimeReached(state.scheduledTime)) {
+        if (state.scheduleActivated) {
+            val scheduledAt = state.scheduledAtMillis
+            if (scheduledAt == null || System.currentTimeMillis() < scheduledAt) {
                 return state.copy(isBlocking = false)
             }
         }
@@ -149,7 +155,7 @@ class AppBlockerManager private constructor(private val context: Context) {
     private fun startServiceIfNeeded() {
         val state = preferencesManager.loadState()
         
-        if (state.isBlocking || state.scheduledTime != null) {
+        if (state.isBlocking || state.scheduledAtMillis != null) {
             BlockerService.startService(context)
         }
     }
@@ -157,7 +163,7 @@ class AppBlockerManager private constructor(private val context: Context) {
     private fun stopServiceIfNotNeeded() {
         val state = preferencesManager.loadState()
         
-        if (!state.isBlocking && state.scheduledTime == null) {
+        if (!state.isBlocking && state.scheduledAtMillis == null) {
             BlockerService.stopService(context)
         }
     }

@@ -16,6 +16,8 @@ type ExpoBlockerNativeModule = {
   clear(): Promise<{ success: boolean }>;
   schedule(time: string): Promise<{ success: boolean }>;
   scheduleWithExclude(time: string, excludeApps: string[]): Promise<{ success: boolean }>;
+  scheduleAt(dateTime: string): Promise<{ success: boolean }>;
+  scheduleAtWithExclude(dateTime: string, excludeApps: string[]): Promise<{ success: boolean }>;
   getState(): Promise<BlockerState>;
   isBlocking(): Promise<boolean>;
   hasUsageStatsPermission(): Promise<boolean>;

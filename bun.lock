@@ -4,6 +4,11 @@
   "workspaces": {
     "": {
       "name": "expo-blocker",
+      "dependencies": {
+        "expo": "^55.0.12",
+        "react": "19.2.0",
+        "react-native": "0.83.2",
+      },
       "devDependencies": {
         "@types/react": "~19.1.1",
         "expo": "^55.0.8",
@@ -11,7 +16,7 @@
         "react-native": "0.82.1",
       },
       "peerDependencies": {
-        "expo": "*",
+        "expo": "^55.0.8",
         "react": "*",
         "react-native": "*",
       },
@@ -1416,7 +1421,7 @@
 
     "range-parser": ["range-parser@1.2.1", "", {}, "sha512-Hrgsx+orqoygnmhFbKaHE6c296J+HTAQXoxEF6gNupROmmGJRoyzfG3ccAveqCBrwr/2yxQ5BVd/GTl5agOwSg=="],
 
-    "react": ["react@19.2.4", "", {}, "sha512-9nfp2hYpCwOjAN+8TZFGhtWEwgvWHXqESH8qT89AT/lWklpLON22Lc8pEtnpsZz7VmawabSU0gCjnj8aC0euHQ=="],
+    "react": ["react@19.2.0", "", {}, "sha512-tmbWg6W31tQLeB5cdIBOicJDJRR2KzXsV7uSK9iNfLWQ5bIZfxuPEHp7M8wiHyHnn0DD1i7w3Zmin0FtkrwoCQ=="],
 
     "react-devtools-core": ["react-devtools-core@6.1.5", "", { "dependencies": { "shell-quote": "^1.6.1", "ws": "^7" } }, "sha512-ePrwPfxAnB+7hgnEr8vpKxL9cmnp7F322t8oqcPshbIQQhDKgFDW4tjhF2wjVbdXF9O/nyuy3sQWd9JGpiLPvA=="],
 

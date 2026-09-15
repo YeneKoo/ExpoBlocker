@@ -7,7 +7,7 @@ A production-ready app blocker for React Native / Expo with scheduling, app usag
 ## Features
 
 - **Block specific apps** or all non-system apps
-- **Schedule blocking** at specific times (HH:mm format)
+- **Schedule blocking** at specific times (HH:mm format) or date+time (yyyy-MM-dd HH:mm)
 - **Exclude apps** from being blocked
 - **App usage statistics** - track how much time you spend on apps
 - **Customizable overlay UI** - change title, message, colors, button styling
@@ -85,15 +85,39 @@ await AppBlocker.block();
 await AppBlocker.block(null, ['com.yourapp.package', 'com.android.settings']);
 ```
 
-### Schedule Blocking
+### Schedule Blocking (Next Occurrence of Time)
 
 ```typescript
-// Block apps starting at 9 PM
+// Block apps the next time it's 9 PM
+// (today at 21:00 if not passed yet, otherwise tomorrow at 21:00)
 await AppBlocker.schedule('21:00');
 
 // With excluded apps
 await AppBlocker.schedule('21:00', ['com.yourapp.package']);
 ```
+
+### Schedule Blocking at Exact Date and Time
+
+```typescript
+// Block apps starting at 9 AM tomorrow
+const tomorrow = new Date();
+tomorrow.setDate(tomorrow.getDate() + 1);
+tomorrow.setHours(9, 0, 0, 0); // 9:00 AM
+
+const year = tomorrow.getFullYear();
+const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
+const day = String(tomorrow.getDate()).padStart(2, '0');
+const hours = String(tomorrow.getHours()).padStart(2, '0');
+const minutes = String(tomorrow.getMinutes()).padStart(2, '0');
+
+const dateTime = `${year}-${month}-${day} ${hours}:${minutes}`;
+await AppBlocker.scheduleAt(dateTime);
+
+// With excluded apps
+await AppBlocker.scheduleAt(dateTime, ['com.yourapp.package']);
+```
+
+> **Note**: `scheduleAt` accepts `YYYY-MM-DD HH:mm` in your device's local timezone. It fires once when that exact moment is reached and stays latched until `clear()` is called. If the datetime is already in the past, blocking activates immediately.
 
 ### Clear Blocking
 
@@ -208,7 +232,8 @@ console.log(state);
 //   isBlocking: true,
 //   blockedApps: ['com.instagram.android'],
 //   blockAll: false,
-//   scheduledTime: null,
+//   scheduledTime: '2026-09-16 21:00',
+//   scheduledAtMillis: 1785856800000,
 //   scheduleActivated: false,
 //   excludeApps: ['com.yourapp.package']
 // }
@@ -286,7 +311,8 @@ export default function App() {
 | `block(apps?, excludeApps?)` | `string[]`, `string[]` | Block apps. Pass `null` for all non-system apps |
 | `blockAll(excludeApps?)` | `string[]` | Block all non-system apps |
 | `clear()` | - | Stop all blocking |
-| `schedule(time, excludeApps?)` | `string` (HH:mm), `string[]` | Schedule blocking at time |
+| `schedule(time, excludeApps?)` | `string` (HH:mm), `string[]` | Schedule blocking at next occurrence of time (today or tomorrow) |
+| `scheduleAt(dateTime, excludeApps?)` | `string` (yyyy-MM-dd HH:mm), `string[]` | Schedule blocking at exact date and time (local timezone) |
 | `getState()` | - | Get current blocking state |
 | `isBlocking()` | - | Check if blocking is active |
 | `checkPermissions()` | - | Check all permissions |

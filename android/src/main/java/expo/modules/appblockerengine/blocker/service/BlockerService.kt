@@ -16,7 +16,6 @@ import expo.modules.appblockerengine.blocker.controller.OverlayController
 import expo.modules.appblockerengine.blocker.monitor.AppMonitor
 import expo.modules.appblockerengine.blocker.model.AppInfo
 import expo.modules.appblockerengine.blocker.storage.PreferencesManager
-import expo.modules.appblockerengine.blocker.util.TimeUtils
 
 class BlockerService : Service() {
     
@@ -162,8 +161,11 @@ class BlockerService : Service() {
             return
         }
         
-        if (state.scheduleActivated && state.scheduledTime != null) {
-            if (!TimeUtils.isTimeReached(state.scheduledTime)) {
+        if (state.scheduleActivated) {
+            val scheduledAt = state.scheduledAtMillis
+            val active = scheduledAt != null && System.currentTimeMillis() >= scheduledAt
+            
+            if (!active) {
                 if (overlayController.isOverlayShowing()) {
                     overlayController.hideOverlay()
                     lastBlockedPackage = null
@@ -225,7 +227,7 @@ class BlockerService : Service() {
         super.onTaskRemoved(rootIntent)
         
         val state = preferencesManager.loadState()
-        if (state.isBlocking || state.scheduledTime != null) {
+        if (state.isBlocking || state.scheduledAtMillis != null) {
             val restartIntent = Intent(this, BlockerService::class.java).apply {
                 action = ACTION_START
             }

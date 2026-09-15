@@ -11,7 +11,9 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
+  Platform,
 } from 'react-native';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import AppBlocker, { BlockerState, PermissionStatus, OverlayConfig, AppUsageStat } from '../src';
 import { useButtonClickListener } from '../src';
 
@@ -28,9 +30,14 @@ export default function AppBlockerExample() {
   const [selectedApps, setSelectedApps] = useState<string[]>([]);
   const [excludeApps, setExcludeApps] = useState<string[]>([]);
   const [scheduleTime, setScheduleTime] = useState('');
+  const [scheduleDateTime, setScheduleDateTime] = useState('');
   const [usageStats, setUsageStats] = useState<AppUsageStat[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'block' | 'usage' | 'settings'>('block');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedTime, setSelectedTime] = useState<Date>(new Date());
 
   useButtonClickListener((event) => {
     Alert.alert('Button Clicked', `User tapped button for blocked app: ${event.packageName}`);
@@ -164,6 +171,131 @@ export default function AppBlockerExample() {
     }
   };
 
+  const handleScheduleAt = async () => {
+    if (!scheduleDateTime || !/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(scheduleDateTime)) {
+      Alert.alert('Invalid Date Time', 'Please enter date time in yyyy-MM-dd HH:mm format (e.g., 2024-12-25 09:00)');
+      return;
+    }
+
+    try {
+      await AppBlocker.scheduleAt(scheduleDateTime, excludeApps);
+      
+      const newState = await AppBlocker.getState();
+      setState(newState);
+      
+      Alert.alert('Success', `Blocking scheduled for ${scheduleDateTime}`);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to schedule blocking');
+      console.error(error);
+    }
+  };
+
+  const handleScheduleTomorrow = async () => {
+    try {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(9, 0, 0, 0);
+
+      const year = tomorrow.getFullYear();
+      const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
+      const day = String(tomorrow.getDate()).padStart(2, '0');
+      const hours = String(tomorrow.getHours()).padStart(2, '0');
+      const minutes = String(tomorrow.getMinutes()).padStart(2, '0');
+
+      const dateTime = `${year}-${month}-${day} ${hours}:${minutes}`;
+      
+      await AppBlocker.scheduleAt(dateTime, excludeApps);
+      
+      const newState = await AppBlocker.getState();
+      setState(newState);
+      
+      Alert.alert('Success', `Blocking scheduled for tomorrow at ${hours}:${minutes}`);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to schedule blocking');
+      console.error(error);
+    }
+  };
+
+  const onDateChange = (event: DateTimePickerEvent, date?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
+    if (date) {
+      setSelectedDate(date);
+      if (Platform.OS === 'ios') {
+        setShowTimePicker(true);
+      }
+    }
+  };
+
+  const onTimeChange = (event: DateTimePickerEvent, time?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowTimePicker(false);
+    }
+    if (time) {
+      setSelectedTime(time);
+    }
+  };
+
+  const handleDatePickerConfirm = async () => {
+    setShowDatePicker(false);
+    setShowTimePicker(true);
+  };
+
+  const handleTimePickerConfirm = async () => {
+    setShowTimePicker(false);
+
+    const combinedDate = new Date(selectedDate);
+    combinedDate.setHours(selectedTime.getHours(), selectedTime.getMinutes(), 0, 0);
+
+    if (combinedDate <= new Date()) {
+      Alert.alert('Invalid Time', 'Please select a future date and time');
+      return;
+    }
+
+    const year = combinedDate.getFullYear();
+    const month = String(combinedDate.getMonth() + 1).padStart(2, '0');
+    const day = String(combinedDate.getDate()).padStart(2, '0');
+    const hours = String(combinedDate.getHours()).padStart(2, '0');
+    const minutes = String(combinedDate.getMinutes()).padStart(2, '0');
+
+    const dateTime = `${year}-${month}-${day} ${hours}:${minutes}`;
+
+    try {
+      await AppBlocker.scheduleAt(dateTime, excludeApps);
+
+      const newState = await AppBlocker.getState();
+      setState(newState);
+
+      Alert.alert('Success', `Blocking scheduled for ${dateTime}`);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to schedule blocking');
+      console.error(error);
+    }
+  };
+
+  const openDateTimePicker = () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(9, 0, 0, 0);
+    setSelectedDate(tomorrow);
+    setSelectedTime(tomorrow);
+    setShowDatePicker(true);
+  };
+
+  const formatDateForDisplay = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const formatTimeForDisplay = (time: Date): string => {
+    const hours = String(time.getHours()).padStart(2, '0');
+    const minutes = String(time.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
+  };
+
   const toggleAppSelection = (packageName: string) => {
     setSelectedApps(prev => 
       prev.includes(packageName)
@@ -258,6 +390,9 @@ export default function AppBlockerExample() {
             <Text style={styles.statusValue}>{state.scheduledTime}</Text>
           </View>
         )}
+        {state?.scheduledAtMillis != null && state?.scheduledAtMillis > Date.now() && (
+          <Text style={styles.statusDetail}>Fires in {(Math.max(0, state.scheduledAtMillis - Date.now()) / 3600000).toFixed(1)}h</Text>
+        )}
       </View>
 
       {/* Quick Actions */}
@@ -280,7 +415,74 @@ export default function AppBlockerExample() {
           onChangeText={setScheduleTime}
           keyboardType="numbers-and-punctuation"
         />
-        <Button title="Set Schedule" onPress={handleSchedule} />
+        <Button title="Set Schedule (Today)" onPress={handleSchedule} />
+      </View>
+
+      {/* Schedule at specific date and time */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>📅 Schedule at Date & Time</Text>
+        
+        {/* Native Date/Time Picker */}
+        <Button title="Pick Date & Time (Native)" onPress={openDateTimePicker} />
+        
+        {showDatePicker && (
+          <View style={styles.pickerContainer}>
+            <Text style={styles.pickerLabel}>Select Date:</Text>
+            <DateTimePicker
+              value={selectedDate}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={onDateChange}
+              minimumDate={new Date()}
+            />
+            {Platform.OS === 'ios' && (
+              <Button title="Next" onPress={handleDatePickerConfirm} />
+            )}
+          </View>
+        )}
+
+        {showTimePicker && (
+          <View style={styles.pickerContainer}>
+            <Text style={styles.pickerLabel}>Select Time:</Text>
+            <DateTimePicker
+              value={selectedTime}
+              mode="time"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={onTimeChange}
+              is24Hour={true}
+            />
+            {Platform.OS === 'ios' && (
+              <Button title="Schedule" onPress={handleTimePickerConfirm} />
+            )}
+          </View>
+        )}
+
+        {Platform.OS === 'android' && (showDatePicker || showTimePicker) && (
+          <View style={styles.selectedDateTimeRow}>
+            <Text style={styles.selectedDateTimeText}>
+              Selected: {formatDateForDisplay(selectedDate)} {formatTimeForDisplay(selectedTime)}
+            </Text>
+            <Button 
+              title="Confirm Schedule" 
+              onPress={handleTimePickerConfirm}
+              color="#4CAF50"
+            />
+          </View>
+        )}
+
+        <View style={styles.divider} />
+        
+        <Text style={styles.helperText}>Or enter manually:</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="yyyy-MM-dd HH:mm (e.g., 2024-12-25 09:00)"
+          value={scheduleDateTime}
+          onChangeText={setScheduleDateTime}
+          keyboardType="numbers-and-punctuation"
+        />
+        <Button title="Set Schedule (Manual)" onPress={handleScheduleAt} />
+        <View style={styles.buttonSpacer} />
+        <Button title="Tomorrow 9:00 AM" onPress={handleScheduleTomorrow} />
       </View>
 
       {/* Exclude Apps */}
@@ -596,5 +798,34 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#4CAF50',
     fontWeight: '500',
+  },
+  pickerContainer: {
+    marginVertical: 10,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    padding: 10,
+  },
+  pickerLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  selectedDateTimeRow: {
+    marginTop: 10,
+    padding: 10,
+    backgroundColor: '#e8f5e9',
+    borderRadius: 8,
+  },
+  selectedDateTimeText: {
+    fontSize: 14,
+    color: '#2e7d32',
+    marginBottom: 8,
+    fontWeight: '500',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#ddd',
+    marginVertical: 16,
   },
 });

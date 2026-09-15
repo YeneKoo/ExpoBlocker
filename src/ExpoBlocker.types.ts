@@ -3,6 +3,7 @@ export interface BlockerState {
   blockedApps: string[];
   blockAll: boolean;
   scheduledTime: string | null;
+  scheduledAtMillis: number | null;
   scheduleActivated: boolean;
   excludeApps: string[];
 }

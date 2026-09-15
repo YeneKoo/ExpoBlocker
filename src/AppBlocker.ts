@@ -32,11 +32,39 @@ export class AppBlocker {
     if (!/^\d{2}:\d{2}$/.test(time)) {
       throw new Error('Invalid time format. Use HH:mm (24-hour format)');
     }
-    if (excludeApps && excludeApps.length > 0) {
-      await this.module.scheduleWithExclude(time, excludeApps);
-    } else {
-      await this.module.schedule(time);
+    const dateTime = AppBlocker.getNextDateTime(time);
+    await this.scheduleAt(dateTime, excludeApps);
+  }
+
+  async scheduleAt(dateTime: string, excludeApps?: string[]): Promise<void> {
+    if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(dateTime)) {
+      throw new Error('Invalid date time format. Use yyyy-MM-dd HH:mm (24-hour format)');
     }
+    if (excludeApps && excludeApps.length > 0) {
+      await this.module.scheduleAtWithExclude(dateTime, excludeApps);
+    } else {
+      await this.module.scheduleAt(dateTime);
+    }
+  }
+
+  private static formatDateTime(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day} ${hours}:${minutes}`;
+  }
+
+  private static getNextDateTime(time: string): string {
+    const [hours, minutes] = time.split(':').map(Number);
+    const now = new Date();
+    const target = new Date(now);
+    target.setHours(hours, minutes, 0, 0);
+    if (target.getTime() <= now.getTime()) {
+      target.setDate(target.getDate() + 1);
+    }
+    return AppBlocker.formatDateTime(target);
   }
 
   async getState(): Promise<BlockerState> {

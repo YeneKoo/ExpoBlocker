@@ -2,58 +2,59 @@ package expo.modules.appblockerengine.blocker.util
 
 import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
 
 object TimeUtils {
     
-    private val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+    private val dateTimeFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).apply {
+        timeZone = TimeZone.getDefault()
+        isLenient = false
+    }
     
-    fun parseTime(timeString: String): Pair<Int, Int>? {
+    private val dateTimeRegex = Regex("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}")
+    
+    private val timeRegex = Regex("\\d{2}:\\d{2}")
+    
+    fun parseDateTimeToMillis(dateTimeString: String): Long? {
+        if (!dateTimeRegex.matches(dateTimeString)) return null
+        
         return try {
-            val parts = timeString.split(":")
-            if (parts.size != 2) return null
-            
-            val hour = parts[0].toInt()
-            val minute = parts[1].toInt()
-            
-            if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
-                return null
-            }
-            
-            Pair(hour, minute)
+            val millis = dateTimeFormat.parse(dateTimeString)?.time ?: return null
+            millis
         } catch (e: Exception) {
             null
         }
     }
     
-    fun isTimeReached(scheduledTime: String): Boolean {
-        val parsed = parseTime(scheduledTime) ?: return false
-        
-        val calendar = Calendar.getInstance()
-        val currentHour = calendar.get(Calendar.HOUR_OF_DAY)
-        val currentMinute = calendar.get(Calendar.MINUTE)
-        
-        return currentHour > parsed.first || 
-               (currentHour == parsed.first && currentMinute >= parsed.second)
+    fun formatMillisToDateTime(millis: Long): String {
+        return dateTimeFormat.format(Date(millis))
     }
     
-    fun getCurrentTimeFormatted(): String {
-        return timeFormat.format(System.currentTimeMillis())
-    }
-    
-    fun getNextScheduleTime(scheduledTime: String): Long {
-        val parsed = parseTime(scheduledTime) ?: return System.currentTimeMillis()
+    fun getNextDateTimeForTime(timeString: String): String? {
+        if (!timeRegex.matches(timeString)) return null
         
-        val calendar = Calendar.getInstance()
-        calendar.set(Calendar.HOUR_OF_DAY, parsed.first)
-        calendar.set(Calendar.MINUTE, parsed.second)
-        calendar.set(Calendar.SECOND, 0)
-        calendar.set(Calendar.MILLISECOND, 0)
-        
-        if (calendar.timeInMillis <= System.currentTimeMillis()) {
-            calendar.add(Calendar.DAY_OF_MONTH, 1)
+        return try {
+            val parts = timeString.split(":")
+            val hour = parts[0].toInt()
+            val minute = parts[1].toInt()
+            
+            if (hour > 23 || minute > 59) return null
+            
+            val calendar = Calendar.getInstance()
+            calendar.set(Calendar.HOUR_OF_DAY, hour)
+            calendar.set(Calendar.MINUTE, minute)
+            calendar.set(Calendar.SECOND, 0)
+            calendar.set(Calendar.MILLISECOND, 0)
+            
+            if (calendar.timeInMillis <= System.currentTimeMillis()) {
+                calendar.add(Calendar.DAY_OF_MONTH, 1)
+            }
+            
+            formatMillisToDateTime(calendar.timeInMillis)
+        } catch (e: Exception) {
+            null
         }
-        
-        return calendar.timeInMillis
     }
 }

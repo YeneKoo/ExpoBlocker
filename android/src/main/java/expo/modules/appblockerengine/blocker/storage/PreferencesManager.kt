@@ -19,6 +19,7 @@ class PreferencesManager(context: Context) {
         private const val KEY_BLOCKED_APPS = "blocked_apps"
         private const val KEY_BLOCK_ALL = "block_all"
         private const val KEY_SCHEDULED_TIME = "scheduled_time"
+        private const val KEY_SCHEDULED_AT_MILLIS = "scheduled_at_millis"
         private const val KEY_SCHEDULE_ACTIVATED = "schedule_activated"
         private const val KEY_EXCLUDE_APPS = "exclude_apps"
         private const val KEY_OVERLAY_CONFIG = "overlay_config"
@@ -40,6 +41,7 @@ class PreferencesManager(context: Context) {
             putStringSet(KEY_BLOCKED_APPS, state.blockedApps.toSet())
             putBoolean(KEY_BLOCK_ALL, state.blockAll)
             putString(KEY_SCHEDULED_TIME, state.scheduledTime)
+            putLong(KEY_SCHEDULED_AT_MILLIS, state.scheduledAtMillis ?: -1L)
             putBoolean(KEY_SCHEDULE_ACTIVATED, state.scheduleActivated)
             putStringSet(KEY_EXCLUDE_APPS, state.excludeApps.toSet())
             apply()
@@ -52,6 +54,7 @@ class PreferencesManager(context: Context) {
             blockedApps = prefs.getStringSet(KEY_BLOCKED_APPS, emptySet())?.toList() ?: emptyList(),
             blockAll = prefs.getBoolean(KEY_BLOCK_ALL, false),
             scheduledTime = prefs.getString(KEY_SCHEDULED_TIME, null),
+            scheduledAtMillis = prefs.getLong(KEY_SCHEDULED_AT_MILLIS, -1L).takeIf { it >= 0 },
             scheduleActivated = prefs.getBoolean(KEY_SCHEDULE_ACTIVATED, false),
             excludeApps = prefs.getStringSet(KEY_EXCLUDE_APPS, emptySet())?.toList() ?: emptyList()
         )

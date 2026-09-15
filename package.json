@@ -1,6 +1,6 @@
 {
   "name": "expo-blocker",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "App blocker for React Native/Expo with scheduling, app usage tracking, and customizable overlay UI",
   "main": "build/index.js",
   "types": "build/index.d.ts",
@@ -33,7 +33,7 @@
   "license": "MIT",
   "homepage": "https://github.com/YeneKoo/ExpoBlocker#readme",
   "dependencies": {
-    "expo": "~55.0.8",
+    "expo": "^55.0.8",
     "react": "19.2.0",
     "react-native": "0.83.2"
   },

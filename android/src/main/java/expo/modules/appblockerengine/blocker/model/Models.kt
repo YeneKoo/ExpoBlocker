@@ -5,6 +5,7 @@ data class BlockerState(
     val blockedApps: List<String> = emptyList(),
     val blockAll: Boolean = false,
     val scheduledTime: String? = null,
+    val scheduledAtMillis: Long? = null,
     val scheduleActivated: Boolean = false,
     val excludeApps: List<String> = emptyList()
 )

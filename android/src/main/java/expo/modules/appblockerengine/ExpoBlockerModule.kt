@@ -61,6 +61,26 @@ class ExpoBlockerModule : Module() {
             }
         }
         
+        AsyncFunction("scheduleAt") { dateTime: String, promise: Promise ->
+            val success = appBlockerManager.scheduleAt(dateTime)
+            if (success) {
+                registerButtonReceiver()
+                promise.resolve(mapOf("success" to true))
+            } else {
+                promise.reject("SCHEDULE_ERROR", "Invalid date time format. Use yyyy-MM-dd HH:mm (24-hour format)", null)
+            }
+        }
+        
+        AsyncFunction("scheduleAtWithExclude") { dateTime: String, excludeApps: List<String>, promise: Promise ->
+            val success = appBlockerManager.scheduleAt(dateTime, excludeApps)
+            if (success) {
+                registerButtonReceiver()
+                promise.resolve(mapOf("success" to true))
+            } else {
+                promise.reject("SCHEDULE_ERROR", "Invalid date time format. Use yyyy-MM-dd HH:mm (24-hour format)", null)
+            }
+        }
+        
         AsyncFunction("getState") { promise: Promise ->
             val state = appBlockerManager.getState()
             promise.resolve(mapOf(
@@ -68,6 +88,7 @@ class ExpoBlockerModule : Module() {
                 "blockedApps" to state.blockedApps,
                 "blockAll" to state.blockAll,
                 "scheduledTime" to state.scheduledTime,
+                "scheduledAtMillis" to state.scheduledAtMillis,
                 "scheduleActivated" to state.scheduleActivated,
                 "excludeApps" to state.excludeApps
             ))
