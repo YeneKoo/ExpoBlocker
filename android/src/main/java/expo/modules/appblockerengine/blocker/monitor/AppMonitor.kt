@@ -291,12 +291,14 @@ class AppMonitor(private val context: Context) {
         while (events.hasNextEvent()) {
             events.getNextEvent(event)
             when (event.eventType) {
-                UsageEvents.Event.SCREEN_INTERACTIVE -> {
-                    if (onSince == null) onSince = event.timeStamp
-                }
+                // A second "on" without an "off" means the phone lost power
+                // with the screen on; restart rather than count the outage.
+                UsageEvents.Event.SCREEN_INTERACTIVE -> onSince = event.timeStamp
                 // An "off" with no "on" before it is dropped: near the end of
-                // the kept history, its start may be days earlier.
-                UsageEvents.Event.SCREEN_NON_INTERACTIVE -> {
+                // the kept history, its start may be days earlier. Shutdown
+                // (Android 10+) ends a session the same way.
+                UsageEvents.Event.SCREEN_NON_INTERACTIVE,
+                UsageEvents.Event.DEVICE_SHUTDOWN -> {
                     val start = onSince
                     if (start != null && event.timeStamp > start) {
                         sessions += ScreenSession(start, event.timeStamp)
