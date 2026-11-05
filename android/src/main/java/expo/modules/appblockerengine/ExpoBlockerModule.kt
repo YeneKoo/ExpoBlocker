@@ -175,6 +175,14 @@ class ExpoBlockerModule : Module() {
             ))
         }
         
+        // JS numbers arrive as Double; epoch milliseconds fit exactly.
+        AsyncFunction("getScreenSessions") { startMillis: Double, endMillis: Double, promise: Promise ->
+            val sessions = appBlockerManager.getScreenSessions(startMillis.toLong(), endMillis.toLong())
+            promise.resolve(sessions?.map { session ->
+                mapOf("start" to session.startMillis, "end" to session.endMillis)
+            })
+        }
+
         AsyncFunction("checkPermissions") { promise: Promise ->
             promise.resolve(mapOf(
                 "usageStats" to appBlockerManager.hasUsageStatsPermission(),

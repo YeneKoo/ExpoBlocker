@@ -5,6 +5,7 @@ import expo.modules.appblockerengine.blocker.model.AppInfo
 import expo.modules.appblockerengine.blocker.model.AppUsageStats
 import expo.modules.appblockerengine.blocker.model.BlockerState
 import expo.modules.appblockerengine.blocker.model.OverlayConfig
+import expo.modules.appblockerengine.blocker.model.ScreenSession
 import expo.modules.appblockerengine.blocker.monitor.AppMonitor
 import expo.modules.appblockerengine.blocker.service.BlockerService
 import expo.modules.appblockerengine.blocker.storage.PreferencesManager
@@ -173,6 +174,10 @@ class AppBlockerManager private constructor(private val context: Context) {
     
     fun getUsageTimeForPackage(packageName: String): Long {
         return appMonitor.getUsageTimeForPackage(packageName)
+    }
+
+    fun getScreenSessions(startMillis: Long, endMillis: Long): List<ScreenSession>? {
+        return appMonitor.getScreenSessions(startMillis, endMillis)
     }
     
     private fun startServiceIfNeeded() {

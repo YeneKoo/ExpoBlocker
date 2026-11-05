@@ -340,6 +340,7 @@ export default function App() {
 | `getAppIcon(package)` | `string` | Get app icon as base64 |
 | `getUsageStats()` | - | Get today's app usage stats |
 | `getAppUsageTime(package)` | `string` | Get usage for specific app |
+| `getScreenSessions(startMillis, endMillis)` | `number`, `number` (epoch ms) | Get the periods the screen was on (`{ start, end }[]`); `null` below Android 9, empty without usage access |
 | `setExcludeApps(apps)` | `string[]` | Set apps to exclude |
 | `getExcludeApps()` | - | Get excluded apps list |
 | `updateOverlayConfig(config)` | `OverlayConfig` | Customize overlay UI |

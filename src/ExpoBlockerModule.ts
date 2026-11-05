@@ -7,7 +7,8 @@ import {
   OverlayConfig,
   AppUsageStat,
   AppUsageTime,
-  ButtonClickedEvent
+  ButtonClickedEvent,
+  ScreenSession
 } from './ExpoBlocker.types';
 
 type ExpoBlockerNativeModule = {
@@ -31,6 +32,7 @@ type ExpoBlockerNativeModule = {
   getAppIcon(packageName: string): Promise<string | null>;
   getUsageStats(): Promise<AppUsageStat[]>;
   getAppUsageTime(packageName: string): Promise<AppUsageTime>;
+  getScreenSessions(startMillis: number, endMillis: number): Promise<ScreenSession[] | null>;
   checkPermissions(): Promise<PermissionStatus>;
   setExcludeApps(apps: string[]): Promise<{ success: boolean }>;
   getExcludeApps(): Promise<string[]>;

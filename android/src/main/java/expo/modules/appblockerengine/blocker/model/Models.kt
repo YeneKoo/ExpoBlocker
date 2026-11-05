@@ -64,6 +64,11 @@ data class AppUsageStats(
     val lastTimeUsed: Long
 )
 
+data class ScreenSession(
+    val startMillis: Long,
+    val endMillis: Long
+)
+
 fun String.toColorInt(): Int {
     val hex = this.removePrefix("#")
     return android.graphics.Color.parseColor("#$hex")

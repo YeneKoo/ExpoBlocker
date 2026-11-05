@@ -53,6 +53,12 @@ export interface AppUsageStat {
   usageTimeFormatted: string;
 }
 
+// Epoch milliseconds the screen turned on and off.
+export interface ScreenSession {
+  start: number;
+  end: number;
+}
+
 export interface AppUsageTime {
   usageTime: number;
   usageTimeFormatted: string;

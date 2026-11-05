@@ -5,7 +5,8 @@ import type {
   OverlayConfig,
   AppUsageStat,
   AppUsageTime,
-  ButtonClickedEvent
+  ButtonClickedEvent,
+  ScreenSession
 } from './ExpoBlocker.types';
 import { useEffect } from 'react';
 
@@ -104,6 +105,12 @@ export class AppBlocker {
 
   async getAppUsageTime(packageName: string): Promise<AppUsageTime> {
     return await this.module.getAppUsageTime(packageName);
+  }
+
+  // Null below Android 9, which has no screen on/off events; empty without
+  // usage access. A session already running at startMillis is left out.
+  async getScreenSessions(startMillis: number, endMillis: number): Promise<ScreenSession[] | null> {
+    return await this.module.getScreenSessions(startMillis, endMillis);
   }
 
   async checkPermissions(): Promise<PermissionStatus> {
